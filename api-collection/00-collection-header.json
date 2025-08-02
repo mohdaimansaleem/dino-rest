@@ -1,0 +1,77 @@
+{
+	"info": {
+		"_postman_id": "dino-emenu-api-collection",
+		"name": "Dino E-Menu API Collection",
+		"description": "Comprehensive API collection for Dino E-Menu Backend - A restaurant e-menu management system with role-based access control.\n\n## Features\n- JWT Authentication\n- Role-based access control (SuperAdmin/Admin/Operator)\n- Multi-tenant workspace support\n- Complete restaurant management\n\n## Base URL\n- **Local Development**: `http://localhost:8080`\n- **Production**: `https://your-api-domain.com`\n\n## Authentication\nMost endpoints require JWT authentication. Include the token in the Authorization header:\n```\nAuthorization: Bearer {{access_token}}\n```\n\n## Environment Variables\nSet these variables in your Postman environment:\n- `base_url`: API base URL\n- `access_token`: JWT access token (obtained from login)\n- `refresh_token`: JWT refresh token\n- `user_id`: Current user ID\n- `workspace_id`: Current workspace ID\n- `venue_id`: Current venue ID",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "dino-emenu"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-set base URL if not set",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:8080');",
+					"}",
+					"",
+					"// Log request details in console",
+					"console.log('Making request to:', pm.request.url.toString());"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-extract tokens from auth responses",
+					"if (pm.response.json() && pm.response.json().access_token) {",
+					"    pm.environment.set('access_token', pm.response.json().access_token);",
+					"    console.log('Access token updated');",
+					"}",
+					"",
+					"if (pm.response.json() && pm.response.json().refresh_token) {",
+					"    pm.environment.set('refresh_token', pm.response.json().refresh_token);",
+					"    console.log('Refresh token updated');",
+					"}",
+					"",
+					"// Auto-extract user info",
+					"if (pm.response.json() && pm.response.json().user) {",
+					"    const user = pm.response.json().user;",
+					"    if (user.id) pm.environment.set('user_id', user.id);",
+					"    if (user.workspace_id) pm.environment.set('workspace_id', user.workspace_id);",
+					"    if (user.venue_id) pm.environment.set('venue_id', user.venue_id);",
+					"}",
+					"",
+					"// Log response status",
+					"console.log('Response status:', pm.response.status, pm.response.code);"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "api_version",
+			"value": "v1",
+			"type": "string"
+		}
+	],
+	"item": [

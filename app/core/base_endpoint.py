@@ -1,42 +1,34 @@
 """
-Enhanced Base Endpoint Class
-Provides standardized CRUD patterns, error handling, and documentation for all API endpoints
+Base Endpoint Classes for Standardized CRUD Operations
+Provides common patterns for API endpoints with authentication, validation, and workspace isolation
 """
-from typing import List, Dict, Any, Optional, Type, TypeVar, Generic
-from fastapi import HTTPException, status, Query, Depends
+from typing import TypeVar, Generic, List, Dict, Any, Optional, Type
+from fastapi import HTTPException, status
 from pydantic import BaseModel
 from abc import ABC, abstractmethod
 
-from app.models.schemas import ApiResponse, PaginatedResponse, ErrorResponse
-from app.core.logging_config import LoggerMixin
-from app.core.security import get_current_user, get_current_admin_user
+from app.core.logging_config import get_logger
 
-T = TypeVar('T', bound=BaseModel)
-CreateT = TypeVar('CreateT', bound=BaseModel)
-UpdateT = TypeVar('UpdateT', bound=BaseModel)
+logger = get_logger(__name__)
+
+# Type variables for generic classes
+ModelType = TypeVar('ModelType', bound=BaseModel)
+CreateSchemaType = TypeVar('CreateSchemaType', bound=BaseModel)
+UpdateSchemaType = TypeVar('UpdateSchemaType', bound=BaseModel)
 
 
-class BaseEndpoint(LoggerMixin, Generic[T, CreateT, UpdateT], ABC):
+class BaseEndpoint(Generic[ModelType, CreateSchemaType, UpdateSchemaType], ABC):
     """
     Base endpoint class providing standardized CRUD operations
-    
-    Features:
-    - Standardized response patterns
-    - Automatic error handling and logging
-    - Role-based access control
-    - Pagination support
-    - Query filtering
-    - OpenAPI documentation
     """
     
     def __init__(self, 
-                 model_class: Type[T],
-                 create_schema: Type[CreateT],
-                 update_schema: Type[UpdateT],
+                 model_class: Type[ModelType],
+                 create_schema: Type[CreateSchemaType],
+                 update_schema: Type[UpdateSchemaType],
                  collection_name: str,
                  require_auth: bool = True,
                  require_admin: bool = False):
-        super().__init__()
         self.model_class = model_class
         self.create_schema = create_schema
         self.update_schema = update_schema
@@ -49,51 +41,79 @@ class BaseEndpoint(LoggerMixin, Generic[T, CreateT, UpdateT], ABC):
         """Get the repository instance for this endpoint"""
         pass
     
-    def get_auth_dependency(self):
-        """Get the appropriate authentication dependency"""
-        if not self.require_auth:
-            return lambda: None
-        elif self.require_admin:
-            return get_current_admin_user
-        else:
-            return get_current_user
+    async def _prepare_create_data(self, 
+                                  data: Dict[str, Any], 
+                                  current_user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Prepare data before creation - override in subclasses"""
+        return data
+    
+    async def _validate_create_permissions(self, 
+                                         data: Dict[str, Any], 
+                                         current_user: Optional[Dict[str, Any]]):
+        """Validate creation permissions - override in subclasses"""
+        if self.require_auth and not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+    
+    async def _validate_access_permissions(self, 
+                                         item: Dict[str, Any], 
+                                         current_user: Optional[Dict[str, Any]]):
+        """Validate access permissions - override in subclasses"""
+        if self.require_auth and not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+    
+    async def _validate_update_permissions(self, 
+                                         item: Dict[str, Any], 
+                                         current_user: Optional[Dict[str, Any]]):
+        """Validate update permissions - override in subclasses"""
+        await self._validate_access_permissions(item, current_user)
+    
+    async def _filter_items_for_user(self, 
+                                   items: List[Dict[str, Any]], 
+                                   current_user: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Filter items based on user permissions - override in subclasses"""
+        return items
+    
+    async def _build_query_filters(self, 
+                                 filters: Optional[Dict[str, Any]], 
+                                 search: Optional[str],
+                                 current_user: Optional[Dict[str, Any]]) -> List[tuple]:
+        """Build query filters - override in subclasses"""
+        query_filters = []
+        
+        if filters:
+            for field, value in filters.items():
+                if value is not None:
+                    query_filters.append((field, '==', value))
+        
+        return query_filters
     
     async def create_item(self, 
-                         item_data: CreateT, 
-                         current_user: Optional[Dict[str, Any]] = None) -> ApiResponse:
-        """
-        Create a new item
-        
-        Args:
-            item_data: Data for creating the item
-            current_user: Current authenticated user
-            
-        Returns:
-            ApiResponse with created item data
-        """
+                         item_data: CreateSchemaType, 
+                         current_user: Optional[Dict[str, Any]]):
+        """Create a new item"""
         try:
-            repo = self.get_repository()
+            # Convert to dict
+            data = item_data.dict() if hasattr(item_data, 'dict') else dict(item_data)
             
-            # Convert to dict and add metadata
-            item_dict = item_data.dict()
-            item_dict = await self._prepare_create_data(item_dict, current_user)
+            # Validate permissions
+            await self._validate_create_permissions(data, current_user)
             
-            # Validate creation permissions
-            await self._validate_create_permissions(item_dict, current_user)
+            # Prepare data
+            prepared_data = await self._prepare_create_data(data, current_user)
             
             # Create item
-            item_id = await repo.create(item_dict)
+            repo = self.get_repository()
+            created_item = await repo.create(prepared_data)
             
-            # Get created item
-            created_item = await repo.get_by_id(item_id)
+            logger.info(f"{self.collection_name.title()} created: {created_item.get('id')}")
             
-            self.log_operation(
-                "create_item",
-                collection=self.collection_name,
-                item_id=item_id,
-                user_id=current_user.get("id") if current_user else None
-            )
-            
+            from app.models.schemas import ApiResponse
             return ApiResponse(
                 success=True,
                 message=f"{self.collection_name.title()} created successfully",
@@ -103,51 +123,161 @@ class BaseEndpoint(LoggerMixin, Generic[T, CreateT, UpdateT], ABC):
         except HTTPException:
             raise
         except Exception as e:
-            self.log_error(e, "create_item", collection=self.collection_name)
+            logger.error(f"Error creating {self.collection_name}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to create {self.collection_name}"
             )
     
-    async def get_items(self,
-                       page: int = Query(1, ge=1, description="Page number"),
-                       page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-                       search: Optional[str] = Query(None, description="Search query"),
-                       filters: Optional[Dict[str, Any]] = None,
-                       current_user: Optional[Dict[str, Any]] = None) -> PaginatedResponse:
-        """
-        Get items with pagination and filtering
-        
-        Args:
-            page: Page number (starts from 1)
-            page_size: Number of items per page
-            search: Search query
-            filters: Additional filters
-            current_user: Current authenticated user
+    async def get_item(self, 
+                      item_id: str, 
+                      current_user: Optional[Dict[str, Any]]):
+        """Get item by ID"""
+        try:
+            repo = self.get_repository()
+            item = await repo.get_by_id(item_id)
             
-        Returns:
-            PaginatedResponse with items
-        """
+            if not item:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{self.collection_name.title()} not found"
+                )
+            
+            # Validate access
+            await self._validate_access_permissions(item, current_user)
+            
+            return self.model_class(**item)
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting {self.collection_name}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to get {self.collection_name}"
+            )
+    
+    async def update_item(self, 
+                         item_id: str, 
+                         update_data: UpdateSchemaType, 
+                         current_user: Optional[Dict[str, Any]]):
+        """Update item by ID"""
+        try:
+            repo = self.get_repository()
+            
+            # Check if item exists
+            item = await repo.get_by_id(item_id)
+            if not item:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{self.collection_name.title()} not found"
+                )
+            
+            # Validate permissions
+            await self._validate_update_permissions(item, current_user)
+            
+            # Convert to dict and exclude unset values
+            update_dict = update_data.dict(exclude_unset=True) if hasattr(update_data, 'dict') else dict(update_data)
+            
+            # Update item
+            updated_item = await repo.update(item_id, update_dict)
+            
+            logger.info(f"{self.collection_name.title()} updated: {item_id}")
+            
+            from app.models.schemas import ApiResponse
+            return ApiResponse(
+                success=True,
+                message=f"{self.collection_name.title()} updated successfully",
+                data=self.model_class(**updated_item)
+            )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error updating {self.collection_name}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update {self.collection_name}"
+            )
+    
+    async def delete_item(self, 
+                         item_id: str, 
+                         current_user: Optional[Dict[str, Any]], 
+                         soft_delete: bool = True):
+        """Delete item by ID"""
+        try:
+            repo = self.get_repository()
+            
+            # Check if item exists
+            item = await repo.get_by_id(item_id)
+            if not item:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{self.collection_name.title()} not found"
+                )
+            
+            # Validate permissions
+            await self._validate_update_permissions(item, current_user)
+            
+            if soft_delete:
+                # Soft delete by setting is_active to False
+                await repo.update(item_id, {"is_active": False})
+                message = f"{self.collection_name.title()} deactivated successfully"
+            else:
+                # Hard delete
+                await repo.delete(item_id)
+                message = f"{self.collection_name.title()} deleted successfully"
+            
+            logger.info(f"{self.collection_name.title()} {'deactivated' if soft_delete else 'deleted'}: {item_id}")
+            
+            from app.models.schemas import ApiResponse
+            return ApiResponse(
+                success=True,
+                message=message
+            )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting {self.collection_name}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete {self.collection_name}"
+            )
+    
+    async def get_items(self, 
+                       page: int = 1, 
+                       page_size: int = 10,
+                       search: Optional[str] = None,
+                       filters: Optional[Dict[str, Any]] = None,
+                       current_user: Optional[Dict[str, Any]] = None):
+        """Get paginated list of items"""
         try:
             repo = self.get_repository()
             
             # Build query filters
             query_filters = await self._build_query_filters(filters, search, current_user)
             
-            # Get filtered items
-            if query_filters:
-                all_items = await repo.query(query_filters)
-            else:
-                all_items = await repo.get_all()
+            # Get all items matching filters
+            all_items = await repo.query(query_filters) if query_filters else await repo.get_all()
             
-            # Apply user-specific filtering
-            all_items = await self._filter_items_for_user(all_items, current_user)
+            # Apply text search if provided
+            if search:
+                search_lower = search.lower()
+                # Basic text search - override in subclasses for more sophisticated search
+                all_items = [
+                    item for item in all_items
+                    if any(search_lower in str(value).lower() for value in item.values() if isinstance(value, str))
+                ]
+            
+            # Filter items based on user permissions
+            filtered_items = await self._filter_items_for_user(all_items, current_user)
             
             # Calculate pagination
-            total = len(all_items)
+            total = len(filtered_items)
             start_idx = (page - 1) * page_size
             end_idx = start_idx + page_size
-            items_page = all_items[start_idx:end_idx]
+            items_page = filtered_items[start_idx:end_idx]
             
             # Convert to model objects
             items = [self.model_class(**item) for item in items_page]
@@ -157,15 +287,7 @@ class BaseEndpoint(LoggerMixin, Generic[T, CreateT, UpdateT], ABC):
             has_next = page < total_pages
             has_prev = page > 1
             
-            self.log_operation(
-                "get_items",
-                collection=self.collection_name,
-                page=page,
-                page_size=page_size,
-                total=total,
-                user_id=current_user.get("id") if current_user else None
-            )
-            
+            from app.models.schemas import PaginatedResponse
             return PaginatedResponse(
                 success=True,
                 data=items,
@@ -180,320 +302,100 @@ class BaseEndpoint(LoggerMixin, Generic[T, CreateT, UpdateT], ABC):
         except HTTPException:
             raise
         except Exception as e:
-            self.log_error(e, "get_items", collection=self.collection_name)
+            logger.error(f"Error getting {self.collection_name} list: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to retrieve {self.collection_name}"
+                detail=f"Failed to get {self.collection_name} list"
             )
-    
-    async def get_item(self, 
-                      item_id: str, 
-                      current_user: Optional[Dict[str, Any]] = None) -> T:
-        """
-        Get item by ID
-        
-        Args:
-            item_id: ID of the item to retrieve
-            current_user: Current authenticated user
-            
-        Returns:
-            Item model instance
-        """
-        try:
-            repo = self.get_repository()
-            
-            item_data = await repo.get_by_id(item_id)
-            if not item_data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{self.collection_name.title()} not found"
-                )
-            
-            # Validate access permissions
-            await self._validate_access_permissions(item_data, current_user)
-            
-            self.log_operation(
-                "get_item",
-                collection=self.collection_name,
-                item_id=item_id,
-                user_id=current_user.get("id") if current_user else None
-            )
-            
-            return self.model_class(**item_data)
-            
-        except HTTPException:
-            raise
-        except Exception as e:
-            self.log_error(e, "get_item", collection=self.collection_name, item_id=item_id)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to retrieve {self.collection_name}"
-            )
-    
-    async def update_item(self, 
-                         item_id: str, 
-                         update_data: UpdateT, 
-                         current_user: Optional[Dict[str, Any]] = None) -> ApiResponse:
-        """
-        Update item by ID
-        
-        Args:
-            item_id: ID of the item to update
-            update_data: Data for updating the item
-            current_user: Current authenticated user
-            
-        Returns:
-            ApiResponse with updated item data
-        """
-        try:
-            repo = self.get_repository()
-            
-            # Check if item exists
-            existing_item = await repo.get_by_id(item_id)
-            if not existing_item:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{self.collection_name.title()} not found"
-                )
-            
-            # Validate update permissions
-            await self._validate_update_permissions(existing_item, current_user)
-            
-            # Prepare update data
-            update_dict = update_data.dict(exclude_unset=True)
-            update_dict = await self._prepare_update_data(update_dict, existing_item, current_user)
-            
-            # Update item
-            await repo.update(item_id, update_dict)
-            
-            # Get updated item
-            updated_item = await repo.get_by_id(item_id)
-            
-            self.log_operation(
-                "update_item",
-                collection=self.collection_name,
-                item_id=item_id,
-                updated_fields=list(update_dict.keys()),
-                user_id=current_user.get("id") if current_user else None
-            )
-            
-            return ApiResponse(
-                success=True,
-                message=f"{self.collection_name.title()} updated successfully",
-                data=self.model_class(**updated_item)
-            )
-            
-        except HTTPException:
-            raise
-        except Exception as e:
-            self.log_error(e, "update_item", collection=self.collection_name, item_id=item_id)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update {self.collection_name}"
-            )
-    
-    async def delete_item(self, 
-                         item_id: str, 
-                         current_user: Optional[Dict[str, Any]] = None,
-                         soft_delete: bool = True) -> ApiResponse:
-        """
-        Delete item by ID
-        
-        Args:
-            item_id: ID of the item to delete
-            current_user: Current authenticated user
-            soft_delete: Whether to perform soft delete (deactivate) or hard delete
-            
-        Returns:
-            ApiResponse confirming deletion
-        """
-        try:
-            repo = self.get_repository()
-            
-            # Check if item exists
-            existing_item = await repo.get_by_id(item_id)
-            if not existing_item:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{self.collection_name.title()} not found"
-                )
-            
-            # Validate delete permissions
-            await self._validate_delete_permissions(existing_item, current_user)
-            
-            # Check for dependencies
-            await self._check_delete_dependencies(item_id, existing_item)
-            
-            if soft_delete:
-                # Soft delete by deactivating
-                await repo.update(item_id, {"is_active": False})
-                message = f"{self.collection_name.title()} deactivated successfully"
-            else:
-                # Hard delete
-                await repo.delete(item_id)
-                message = f"{self.collection_name.title()} deleted successfully"
-            
-            self.log_operation(
-                "delete_item",
-                collection=self.collection_name,
-                item_id=item_id,
-                soft_delete=soft_delete,
-                user_id=current_user.get("id") if current_user else None
-            )
-            
-            return ApiResponse(
-                success=True,
-                message=message
-            )
-            
-        except HTTPException:
-            raise
-        except Exception as e:
-            self.log_error(e, "delete_item", collection=self.collection_name, item_id=item_id)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to delete {self.collection_name}"
-            )
-    
-    # Hook methods for customization
-    async def _prepare_create_data(self, 
-                                  data: Dict[str, Any], 
-                                  current_user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Prepare data before creation (override in subclasses)"""
-        return data
-    
-    async def _prepare_update_data(self, 
-                                  data: Dict[str, Any], 
-                                  existing_item: Dict[str, Any],
-                                  current_user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Prepare data before update (override in subclasses)"""
-        return data
-    
-    async def _build_query_filters(self, 
-                                  filters: Optional[Dict[str, Any]], 
-                                  search: Optional[str],
-                                  current_user: Optional[Dict[str, Any]]) -> List[tuple]:
-        """Build query filters (override in subclasses)"""
-        query_filters = []
-        
-        if filters:
-            for field, value in filters.items():
-                if value is not None:
-                    query_filters.append((field, "==", value))
-        
-        return query_filters
-    
-    async def _filter_items_for_user(self, 
-                                   items: List[Dict[str, Any]], 
-                                   current_user: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Filter items based on user permissions (override in subclasses)"""
-        return items
-    
-    async def _validate_create_permissions(self, 
-                                         data: Dict[str, Any], 
-                                         current_user: Optional[Dict[str, Any]]):
-        """Validate create permissions (override in subclasses)"""
-        pass
+
+
+class WorkspaceIsolatedEndpoint(BaseEndpoint[ModelType, CreateSchemaType, UpdateSchemaType]):
+    """
+    Endpoint class with workspace isolation
+    Ensures users can only access items within their workspace
+    """
     
     async def _validate_access_permissions(self, 
                                          item: Dict[str, Any], 
                                          current_user: Optional[Dict[str, Any]]):
-        """Validate access permissions (override in subclasses)"""
-        pass
-    
-    async def _validate_update_permissions(self, 
-                                         item: Dict[str, Any], 
-                                         current_user: Optional[Dict[str, Any]]):
-        """Validate update permissions (override in subclasses)"""
-        pass
-    
-    async def _validate_delete_permissions(self, 
-                                         item: Dict[str, Any], 
-                                         current_user: Optional[Dict[str, Any]]):
-        """Validate delete permissions (override in subclasses)"""
-        pass
-    
-    async def _check_delete_dependencies(self, 
-                                       item_id: str, 
-                                       item: Dict[str, Any]):
-        """Check for dependencies before deletion (override in subclasses)"""
-        pass
-
-
-class WorkspaceIsolatedEndpoint(BaseEndpoint[T, CreateT, UpdateT]):
-    """
-    Base endpoint for workspace-isolated resources
-    Automatically filters resources by workspace
-    """
+        """Validate workspace access permissions"""
+        # Call parent validation first
+        await super()._validate_access_permissions(item, current_user)
+        
+        if not current_user:
+            return
+        
+        # Get user role from role_id
+        from app.core.security import _get_user_role
+        try:
+            user_role = await _get_user_role(current_user)
+        except:
+            user_role = current_user.get('role', 'operator')
+        
+        # Admin users can access all items
+        if user_role in ['admin', 'superadmin']:
+            return
+        
+        # Check workspace isolation
+        item_workspace_id = item.get('workspace_id')
+        user_workspace_id = current_user.get('workspace_id')
+        
+        if item_workspace_id and user_workspace_id != item_workspace_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Item not in your workspace"
+            )
     
     async def _filter_items_for_user(self, 
                                    items: List[Dict[str, Any]], 
                                    current_user: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Filter items by workspace"""
-        if not current_user or not current_user.get("workspace_id"):
+        """Filter items based on workspace isolation"""
+        if not current_user:
+            return []
+        
+        # Get user role from role_id
+        from app.core.security import _get_user_role
+        try:
+            user_role = await _get_user_role(current_user)
+        except:
+            user_role = current_user.get('role', 'operator')
+        
+        # Admin users see all items
+        if user_role in ['admin', 'superadmin']:
             return items
         
         # Filter by workspace
-        workspace_id = current_user["workspace_id"]
-        return [item for item in items if item.get("workspace_id") == workspace_id]
+        user_workspace_id = current_user.get('workspace_id')
+        if user_workspace_id:
+            return [item for item in items if item.get('workspace_id') == user_workspace_id]
+        
+        return []
     
-    async def _validate_access_permissions(self, 
-                                         item: Dict[str, Any], 
-                                         current_user: Optional[Dict[str, Any]]):
-        """Validate workspace access"""
-        if not current_user:
-            return
+    async def _build_query_filters(self, 
+                                 filters: Optional[Dict[str, Any]], 
+                                 search: Optional[str],
+                                 current_user: Optional[Dict[str, Any]]) -> List[tuple]:
+        """Build query filters with workspace isolation"""
+        query_filters = []
         
-        user_workspace_id = current_user.get("workspace_id")
-        item_workspace_id = item.get("workspace_id")
+        # Add workspace filter for non-admin users
+        if current_user:
+            # Get user role from role_id
+            from app.core.security import _get_user_role
+            try:
+                user_role = await _get_user_role(current_user)
+            except:
+                user_role = current_user.get('role', 'operator')
+            
+            if user_role not in ['admin', 'superadmin']:
+                workspace_id = current_user.get('workspace_id')
+                if workspace_id:
+                    query_filters.append(('workspace_id', '==', workspace_id))
         
-        if user_workspace_id and item_workspace_id and user_workspace_id != item_workspace_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: Item belongs to different workspace"
-            )
-
-
-class VenueIsolatedEndpoint(BaseEndpoint[T, CreateT, UpdateT]):
-    """
-    Base endpoint for venue-isolated resources
-    Automatically filters resources by venue access
-    """
-    
-    async def _filter_items_for_user(self, 
-                                   items: List[Dict[str, Any]], 
-                                   current_user: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Filter items by venue access"""
-        if not current_user:
-            return items
+        # Add additional filters
+        if filters:
+            for field, value in filters.items():
+                if value is not None:
+                    query_filters.append((field, '==', value))
         
-        # Admin users see all items
-        if current_user.get("role") == "admin":
-            return items
-        
-        # Filter by user's venue access
-        user_venue_id = current_user.get("venue_id")
-        if user_venue_id:
-            return [item for item in items if item.get("venue_id") == user_venue_id]
-        
-        return items
-    
-    async def _validate_access_permissions(self, 
-                                         item: Dict[str, Any], 
-                                         current_user: Optional[Dict[str, Any]]):
-        """Validate venue access"""
-        if not current_user:
-            return
-        
-        # Admin users have access to all items
-        if current_user.get("role") == "admin":
-            return
-        
-        user_venue_id = current_user.get("venue_id")
-        item_venue_id = item.get("venue_id")
-        
-        if user_venue_id and item_venue_id and user_venue_id != item_venue_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: Item belongs to different venue"
-            )
+        return query_filters

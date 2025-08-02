@@ -9,12 +9,14 @@ from datetime import datetime
 import logging
 
 from app.core.config import get_firestore_client
-from app.core.logging_config import LoggerMixin
+from app.core.logging_config import EnhancedLoggerMixin, log_function_call
+from app.core.logging_middleware import db_logger
+import time
 
 logger = logging.getLogger(__name__)
 
 
-class FirestoreRepository(LoggerMixin):
+class FirestoreRepository(EnhancedLoggerMixin):
     """Base repository class for Firestore operations"""
     
     def __init__(self, collection_name: str):
@@ -41,6 +43,12 @@ class FirestoreRepository(LoggerMixin):
         if not self.collection:
             raise RuntimeError(f"Firestore collection '{self.collection_name}' not available")
     
+    def _doc_to_dict(self, doc) -> Dict[str, Any]:
+        """Convert Firestore document to dictionary"""
+        data = doc.to_dict()
+        data['id'] = doc.id
+        return data
+    
     def _prepare_data_for_firestore(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare data for Firestore by converting incompatible types"""
         from datetime import date, datetime
@@ -66,11 +74,17 @@ class FirestoreRepository(LoggerMixin):
         
         return prepared_data
     
-    async def create(self, data: Dict[str, Any], doc_id: Optional[str] = None) -> str:
+    @log_function_call(include_args=False, include_result=False)
+    async def create(self, data: Dict[str, Any], doc_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new document"""
+        start_time = time.time()
         self._ensure_collection()
         
         try:
+            self.log_debug(f"Creating document in {self.collection_name}", 
+                          doc_id=doc_id, 
+                          data_keys=list(data.keys()) if data else None)
+            
             # Convert date objects to datetime for Firestore compatibility
             data = self._prepare_data_for_firestore(data)
             
@@ -81,49 +95,138 @@ class FirestoreRepository(LoggerMixin):
             if doc_id:
                 doc_ref = self.collection.document(doc_id)
                 doc_ref.set(data)
-                self.log_operation("create_document", 
-                                 collection=self.collection_name, 
-                                 doc_id=doc_id)
-                return doc_id
+                created_id = doc_id
             else:
                 doc_ref = self.collection.add(data)[1]
-                self.log_operation("create_document", 
-                                 collection=self.collection_name, 
-                                 doc_id=doc_ref.id)
-                return doc_ref.id
+                created_id = doc_ref.id
+            
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Log to database logger (conditional)
+            try:
+                from app.core.feature_manager import get_feature_manager
+                feature_manager = get_feature_manager()
+                if feature_manager and feature_manager.is_database_logging_enabled():
+                    db_logger.log_query(
+                        operation="create",
+                        collection=self.collection_name,
+                        duration_ms=duration_ms,
+                        result_count=1,
+                        doc_id=created_id
+                    )
+            except Exception:
+                pass  # Skip logging if feature manager not available
+            
+            self.log_operation("create_document", 
+                             collection=self.collection_name, 
+                             doc_id=created_id,
+                             duration_ms=duration_ms)
+            
+            # Return the created document with ID
+            data['id'] = created_id
+            return data
+            
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Log to database logger
+            db_logger.log_error(
+                operation="create",
+                collection=self.collection_name,
+                error=e,
+                doc_id=doc_id,
+                duration_ms=duration_ms
+            )
+            
             self.log_error(e, "create_document", 
                           collection=self.collection_name, 
-                          doc_id=doc_id)
+                          doc_id=doc_id,
+                          duration_ms=duration_ms)
             raise
     
+    @log_function_call(include_args=False, include_result=False)
     async def get_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
         """Get document by ID"""
+        start_time = time.time()
         self._ensure_collection()
         
         try:
-            doc = self.collection.document(doc_id).get()
+            self.log_debug(f"Getting document by ID from {self.collection_name}", doc_id=doc_id)
+            
+            # Add timeout protection for Firestore operations
+            import asyncio
+            try:
+                doc = await asyncio.wait_for(
+                    asyncio.to_thread(self.collection.document(doc_id).get),
+                    timeout=10.0
+                )
+            except asyncio.TimeoutError:
+                self.log_error("Firestore timeout during get_by_id", collection=self.collection_name, doc_id=doc_id)
+                raise Exception(f"Database timeout for {self.collection_name}.get_by_id({doc_id})")
+            
+            duration_ms = (time.time() - start_time) * 1000
+            
             if doc.exists:
                 data = doc.to_dict()
                 data['id'] = doc.id
+                
+                # Log to database logger (conditional)
+                try:
+                    from app.core.feature_manager import get_feature_manager
+                    feature_manager = get_feature_manager()
+                    if feature_manager and feature_manager.is_database_logging_enabled():
+                        db_logger.log_query(
+                            operation="get_by_id",
+                            collection=self.collection_name,
+                            duration_ms=duration_ms,
+                            result_count=1,
+                            doc_id=doc_id
+                        )
+                except Exception:
+                    pass  # Skip logging if feature manager not available
+                
                 self.log_operation("get_document", 
                                  collection=self.collection_name, 
                                  doc_id=doc_id, 
-                                 found=True)
+                                 found=True,
+                                 duration_ms=duration_ms)
                 return data
+            
+            # Log to database logger
+            db_logger.log_query(
+                operation="get_by_id",
+                collection=self.collection_name,
+                duration_ms=duration_ms,
+                result_count=0,
+                doc_id=doc_id
+            )
             
             self.log_operation("get_document", 
                              collection=self.collection_name, 
                              doc_id=doc_id, 
-                             found=False)
+                             found=False,
+                             duration_ms=duration_ms)
             return None
+            
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Log to database logger
+            db_logger.log_error(
+                operation="get_by_id",
+                collection=self.collection_name,
+                error=e,
+                doc_id=doc_id,
+                duration_ms=duration_ms
+            )
+            
             self.log_error(e, "get_document", 
                           collection=self.collection_name, 
-                          doc_id=doc_id)
+                          doc_id=doc_id,
+                          duration_ms=duration_ms)
             raise
     
-    async def update(self, doc_id: str, data: Dict[str, Any]) -> bool:
+    async def update(self, doc_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Update document by ID"""
         self._ensure_collection()
         
@@ -139,7 +242,10 @@ class FirestoreRepository(LoggerMixin):
             self.log_operation("update_document", 
                              collection=self.collection_name, 
                              doc_id=doc_id)
-            return True
+            
+            # Get and return the updated document
+            updated_doc = await self.get_by_id(doc_id)
+            return updated_doc
         except Exception as e:
             self.log_error(e, "update_document", 
                           collection=self.collection_name, 
@@ -209,7 +315,17 @@ class FirestoreRepository(LoggerMixin):
             if limit:
                 query = query.limit(limit)
             
-            docs = query.stream()
+            # Add timeout protection for query operations
+            import asyncio
+            try:
+                docs = await asyncio.wait_for(
+                    asyncio.to_thread(lambda: list(query.stream())),
+                    timeout=15.0
+                )
+            except asyncio.TimeoutError:
+                self.log_error("Firestore timeout during query", collection=self.collection_name, filters=filters)
+                raise Exception(f"Database timeout for {self.collection_name}.query({filters})")
+            
             results = []
             for doc in docs:
                 data = doc.to_dict()
@@ -248,6 +364,126 @@ class FirestoreRepository(LoggerMixin):
                           collection=self.collection_name, 
                           doc_id=doc_id)
             raise
+    
+    async def update_batch(self, updates: List[tuple]) -> bool:
+        """Batch update multiple documents"""
+        self._ensure_collection()
+        
+        try:
+            # Firestore batch operations
+            batch = self.db.batch()
+            
+            for doc_id, update_data in updates:
+                # Prepare data for Firestore
+                update_data = self._prepare_data_for_firestore(update_data)
+                update_data['updated_at'] = datetime.utcnow()
+                
+                doc_ref = self.collection.document(doc_id)
+                batch.update(doc_ref, update_data)
+            
+            # Commit batch
+            batch.commit()
+            
+            self.log_operation("batch_update", 
+                             collection=self.collection_name, 
+                             count=len(updates))
+            return True
+            
+        except Exception as e:
+            self.log_error(e, "batch_update", 
+                          collection=self.collection_name, 
+                          count=len(updates))
+            raise
+    
+    async def create_batch(self, items_data: List[Dict[str, Any]]) -> List[str]:
+        """Batch create multiple documents"""
+        self._ensure_collection()
+        
+        try:
+            # Firestore batch operations
+            batch = self.db.batch()
+            created_ids = []
+            
+            for data in items_data:
+                # Prepare data for Firestore
+                data = self._prepare_data_for_firestore(data)
+                data['created_at'] = datetime.utcnow()
+                data['updated_at'] = datetime.utcnow()
+                
+                doc_ref = self.collection.document()
+                data['id'] = doc_ref.id
+                batch.set(doc_ref, data)
+                created_ids.append(doc_ref.id)
+            
+            # Commit batch
+            batch.commit()
+            
+            self.log_operation("batch_create", 
+                             collection=self.collection_name, 
+                             count=len(created_ids))
+            return created_ids
+            
+        except Exception as e:
+            self.log_error(e, "batch_create", 
+                          collection=self.collection_name, 
+                          count=len(items_data))
+            raise
+    
+    async def search_text(self, 
+                         search_fields: List[str],
+                         search_term: str,
+                         additional_filters: Optional[List[tuple]] = None,
+                         limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Search for documents containing the search term in specified fields
+        Note: This is a basic implementation. For production, consider using 
+        Firestore's full-text search or Algolia integration.
+        """
+        self._ensure_collection()
+        
+        try:
+            # Get all documents (or apply additional filters first)
+            if additional_filters:
+                all_docs = await self.query(additional_filters, limit=limit)
+            else:
+                all_docs = await self.get_all(limit=limit)
+            
+            # Filter documents that contain the search term in any of the specified fields
+            search_term_lower = search_term.lower()
+            matching_docs = []
+            
+            for doc in all_docs:
+                for field in search_fields:
+                    field_value = doc.get(field, '')
+                    
+                    # Handle different field types
+                    if isinstance(field_value, str):
+                        if search_term_lower in field_value.lower():
+                            matching_docs.append(doc)
+                            break
+                    elif isinstance(field_value, list):
+                        # Search in array fields (like cuisine_types)
+                        for item in field_value:
+                            if isinstance(item, str) and search_term_lower in item.lower():
+                                matching_docs.append(doc)
+                                break
+                        if doc in matching_docs:
+                            break
+            
+            self.log_operation("search_text", 
+                             collection=self.collection_name, 
+                             search_fields=search_fields,
+                             search_term=search_term,
+                             results_count=len(matching_docs))
+            
+            return matching_docs
+            
+        except Exception as e:
+            self.log_error(e, "search_text", 
+                          collection=self.collection_name, 
+                          search_fields=search_fields,
+                          search_term=search_term)
+            raise
 
 
 # Repository classes for each collection
@@ -276,8 +512,10 @@ class RoleRepository(FirestoreRepository):
         return results[0] if results else None
     
     async def get_system_roles(self) -> List[Dict[str, Any]]:
-        """Get all system roles"""
-        return await self.query([("is_system_role", "==", True)])
+        """Get all system roles - Note: is_system_role field removed from schema"""
+        # This method is kept for backward compatibility but will return all roles
+        # since is_system_role field has been removed from roles collection
+        return await self.get_all()
 
 
 class PermissionRepository(FirestoreRepository):
@@ -298,14 +536,44 @@ class UserRepository(FirestoreRepository):
     def __init__(self):
         super().__init__("users")
     
+    async def get_by_venue_id(self, venue_id: str) -> List[Dict[str, Any]]:
+        """Get all users by venue ID"""
+        try:
+            query = self.collection.where('venue_id', '==', venue_id)
+            docs = query.stream()
+            return [self._doc_to_dict(doc) for doc in docs]
+        except Exception as e:
+            self.logger.error(f"Error getting users by venue_id {venue_id}: {e}")
+            return []
+    
+    async def get_by_workspace_id(self, workspace_id: str) -> List[Dict[str, Any]]:
+        """Get all users by workspace ID"""
+        try:
+            query = self.collection.where('workspace_id', '==', workspace_id)
+            docs = query.stream()
+            return [self._doc_to_dict(doc) for doc in docs]
+        except Exception as e:
+            self.logger.error(f"Error getting users by workspace_id {workspace_id}: {e}")
+            return []
+    
+    async def get_recent(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent users"""
+        try:
+            query = self.collection.order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
+            docs = query.stream()
+            return [self._doc_to_dict(doc) for doc in docs]
+        except Exception as e:
+            self.logger.error(f"Error getting recent users: {e}")
+            return []
+
     async def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
         results = await self.query([("email", "==", email)])
         return results[0] if results else None
     
-    async def get_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
-        """Get user by phone number"""
-        results = await self.query([("phone", "==", phone)])
+    async def get_by_mobile(self, mobile_number: str) -> Optional[Dict[str, Any]]:
+        """Get user by mobile number"""
+        results = await self.query([("mobile_number", "==", mobile_number)])
         return results[0] if results else None
     
     async def get_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
@@ -325,8 +593,17 @@ class VenueRepository(FirestoreRepository):
     def __init__(self):
         super().__init__("venues")
     
+    async def get_by_workspace_id(self, workspace_id: str) -> List[Dict[str, Any]]:
+        """Get all venues by workspace ID"""
+        return await self.query([("workspace_id", "==", workspace_id)])
+    
+    async def get_by_venue_id(self, venue_id: str) -> List[Dict[str, Any]]:
+        """Get venue by venue ID (returns list for consistency)"""
+        venue = await self.get_by_id(venue_id)
+        return [venue] if venue else []
+    
     async def get_by_workspace(self, workspace_id: str) -> List[Dict[str, Any]]:
-        """Get cafes by workspace ID"""
+        """Get venues by workspace ID"""
         return await self.query([("workspace_id", "==", workspace_id)])
     
     async def get_by_admin(self, admin_id: str) -> List[Dict[str, Any]]:
@@ -349,6 +626,10 @@ class VenueRepository(FirestoreRepository):
 class MenuItemRepository(FirestoreRepository):
     def __init__(self):
         super().__init__("menu_items")
+    
+    async def get_by_venue_id(self, venue_id: str) -> List[Dict[str, Any]]:
+        """Get menu items by venue ID"""
+        return await self.query([("venue_id", "==", venue_id)], order_by="created_at")
     
     async def get_by_venue(self, venue_id: str) -> List[Dict[str, Any]]:
         """Get menu items by cafe ID"""
@@ -374,6 +655,10 @@ class MenuCategoryRepository(FirestoreRepository):
 class TableRepository(FirestoreRepository):
     def __init__(self):
         super().__init__("tables")
+    
+    async def get_by_venue_id(self, venue_id: str) -> List[Dict[str, Any]]:
+        """Get tables by venue ID"""
+        return await self.query([("venue_id", "==", venue_id)], order_by="table_number")
     
     async def get_by_venue(self, venue_id: str) -> List[Dict[str, Any]]:
         """Get tables by cafe ID"""
@@ -403,6 +688,14 @@ class TableRepository(FirestoreRepository):
 class OrderRepository(FirestoreRepository):
     def __init__(self):
         super().__init__("orders")
+    
+    async def get_by_venue_id(self, venue_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get orders by venue ID"""
+        return await self.query([("venue_id", "==", venue_id)], order_by="created_at", limit=limit)
+    
+    async def get_recent(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent orders"""
+        return await self.query([], order_by="created_at", limit=limit)
     
     async def get_by_cafe(self, venue_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get orders by cafe ID"""
@@ -438,11 +731,41 @@ class CustomerRepository(FirestoreRepository):
         """Get customers by cafe ID"""
         return await self.query([("venue_id", "==", venue_id)])
     
-    async def get_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
-        """Get customer by phone"""
-        results = await self.query([("phone", "==", phone)])
+    async def get_by_mobile(self, mobile_number: str) -> Optional[Dict[str, Any]]:
+        """Get customer by mobile number"""
+        results = await self.query([("mobile_number", "==", mobile_number)])
         return results[0] if results else None
     
+    async def get_by_venue_id(self, venue_id: str) -> List[Dict[str, Any]]:
+        """Get all users by venue ID"""
+        try:
+            query = self.collection.where('venue_id', '==', venue_id)
+            docs = query.stream()
+            return [self._doc_to_dict(doc) for doc in docs]
+        except Exception as e:
+            self.logger.error(f"Error getting users by venue_id {venue_id}: {e}")
+            return []
+    
+    async def get_by_workspace_id(self, workspace_id: str) -> List[Dict[str, Any]]:
+        """Get all users by workspace ID"""
+        try:
+            query = self.collection.where('workspace_id', '==', workspace_id)
+            docs = query.stream()
+            return [self._doc_to_dict(doc) for doc in docs]
+        except Exception as e:
+            self.logger.error(f"Error getting users by workspace_id {workspace_id}: {e}")
+            return []
+    
+    async def get_recent(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent users"""
+        try:
+            query = self.collection.order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
+            docs = query.stream()
+            return [self._doc_to_dict(doc) for doc in docs]
+        except Exception as e:
+            self.logger.error(f"Error getting recent users: {e}")
+            return []
+
     async def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get customer by email"""
         results = await self.query([("email", "==", email)])

@@ -1,0 +1,562 @@
+		{
+			"name": "👑 Role Management",
+			"description": "Role management endpoints for creating and managing user roles with permissions",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has roles array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/?page=1&page_size=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								},
+								{
+									"key": "is_active",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of roles with optional filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has role data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"    pm.expect(jsonData).to.have.property('permissions');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{role_id}}"]
+						},
+						"description": "Get specific role by ID with permissions."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has role data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    ",
+									"    // Store created role ID",
+									"    pm.environment.set('created_role_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"operator\",\n    \"description\": \"Day-to-day operations with order and table management\",\n    \"permission_ids\": [],\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", ""]
+						},
+						"description": "Create a new role. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Updated: Day-to-day operations with enhanced order and table management\",\n    \"is_active\": true,\n    \"permission_ids\": [\"{{permission_id_1}}\", \"{{permission_id_2}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{created_role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{created_role_id}}"]
+						},
+						"description": "Update role information and permissions."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role Permissions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has permissions array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{role_id}}/permissions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{role_id}}", "permissions"]
+						},
+						"description": "Get all permissions assigned to a specific role."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Permissions to Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role_id\": \"{{created_role_id}}\",\n    \"permission_ids\": [\"{{permission_id_1}}\", \"{{permission_id_2}}\", \"{{permission_id_3}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{created_role_id}}/permissions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{created_role_id}}", "permissions"]
+						},
+						"description": "Assign permissions to a role (replaces existing permissions)."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Permissions to Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role_id\": \"{{created_role_id}}\",\n    \"permission_ids\": [\"{{permission_id_4}}\", \"{{permission_id_5}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{created_role_id}}/permissions/add",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{created_role_id}}", "permissions", "add"]
+						},
+						"description": "Add permissions to a role (keeps existing permissions)."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Permissions from Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role_id\": \"{{created_role_id}}\",\n    \"permission_ids\": [\"{{permission_id_1}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{created_role_id}}/permissions/remove",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{created_role_id}}", "permissions", "remove"]
+						},
+						"description": "Remove specific permissions from a role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users with Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has users array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{role_id}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{role_id}}", "users"]
+						},
+						"description": "Get all users assigned to a specific role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has statistics data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('total_roles');",
+									"    pm.expect(jsonData).to.have.property('active_roles');",
+									"    pm.expect(jsonData).to.have.property('users_by_role');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/statistics/overview",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "statistics", "overview"]
+						},
+						"description": "Get comprehensive role statistics."
+					},
+					"response": []
+				},
+				{
+					"name": "Check Role Name Availability",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has availability status', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('available');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/check-name?name=manager",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "check-name"],
+							"query": [
+								{
+									"key": "name",
+									"value": "manager"
+								},
+								{
+									"key": "exclude_id",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Check if role name is available."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Single Permission (Simplified)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{created_role_id}}/assign-permission?permission_id={{permission_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{created_role_id}}", "assign-permission"],
+							"query": [
+								{
+									"key": "permission_id",
+									"value": "{{permission_id}}"
+								}
+							]
+						},
+						"description": "Assign a single permission to role (simplified for seeding)."
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Assign Permissions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('assigned_count');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"permission_ids\": [\"{{permission_id_1}}\", \"{{permission_id_2}}\", \"{{permission_id_3}}\", \"{{permission_id_4}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{created_role_id}}/assign-permissions-bulk",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{created_role_id}}", "assign-permissions-bulk"]
+						},
+						"description": "Assign multiple permissions to a role in bulk (for seeding)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/roles/{{created_role_id}}?hard_delete=false",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "roles", "{{created_role_id}}"],
+							"query": [
+								{
+									"key": "hard_delete",
+									"value": "false"
+								}
+							]
+						},
+						"description": "Delete a role. Requires admin privileges. Usually performs soft delete."
+					},
+					"response": []
+				}
+			]
+		},

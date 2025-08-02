@@ -24,7 +24,7 @@ CORS_ORIGINS=*
 # =============================================================================
 # GOOGLE CLOUD PLATFORM
 # =============================================================================
-GCP_PROJECT_ID=gcp-dino-prod
+GCP_PROJECT_ID=edl-idaas-fdev-platform-2c85
 GCP_REGION=us-central1
 
 # =============================================================================
@@ -35,7 +35,7 @@ DATABASE_NAME=jm-dino
 # =============================================================================
 # CLOUD STORAGE
 # =============================================================================
-GCS_BUCKET_NAME=gcp-dino-prod-dino-storage
+GCS_BUCKET_NAME=edl-idaas-fdev-platform-2c85-dino-storage
 GCS_BUCKET_REGION=us-central1
 GCS_IMAGES_FOLDER=images
 GCS_DOCUMENTS_FOLDER=documents
@@ -64,7 +64,7 @@ RATE_LIMIT_PER_MINUTE=60
 # CLOUD RUN
 # =============================================================================
 CLOUD_RUN_SERVICE_NAME=dino-backend-api
-CLOUD_RUN_IMAGE_NAME=us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/gcp-dino-prod/${CLOUD_RUN_SERVICE_NAME}
+CLOUD_RUN_IMAGE_NAME=us-central1-docker.pkg.dev/edl-idaas-fdev-platform-2c85/job-manager-artifacts/dino-backend-api
 CLOUD_RUN_REGION=us-central1
 CLOUD_RUN_MEMORY=512Mi
 CLOUD_RUN_CPU=1

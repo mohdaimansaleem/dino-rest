@@ -44,48 +44,21 @@ class RolePermissionService:
             if not user:
                 return PermissionCheck(
                     has_permission=False,
-                    user_role=UserRole.OPERATOR,
-                    venue_access=False,
-                    workspace_access=False,
-                    denied_reason="User not found"
+                    reason="User not found",
+                    required_role=None,
+                    user_role=UserRole.OPERATOR
                 )
             
             if not user.get('is_active', False):
                 return PermissionCheck(
                     has_permission=False,
-                    user_role=UserRole(user.get('role', 'operator')),
-                    venue_access=False,
-                    workspace_access=False,
-                    denied_reason="User account is inactive"
+                    reason="User account is inactive",
+                    required_role=None,
+                    user_role=UserRole(user.get('role', 'operator'))
                 )
             
             user_role = UserRole(user.get('role', 'operator'))
             user_permissions = set(user.get('permissions', []))
-            user_workspace_id = user.get('workspace_id')
-            user_venue_access = user.get('venue_access', [])
-            
-            # Check workspace access
-            workspace_access = True
-            if workspace_id and user_workspace_id != workspace_id:
-                if user_role != UserRole.SUPERADMIN:
-                    workspace_access = False
-            
-            # Check venue access
-            venue_access = True
-            if venue_id:
-                if user_role == UserRole.SUPERADMIN:
-                    # SuperAdmin can access any venue in their workspace
-                    venue = await self.venue_repo.get_by_id(venue_id)
-                    if venue and venue.get('workspace_id') != user_workspace_id:
-                        venue_access = False
-                elif user_role == UserRole.ADMIN:
-                    # Admin can access venues they're assigned to
-                    if venue_id not in user_venue_access:
-                        venue_access = False
-                elif user_role == UserRole.OPERATOR:
-                    # Operator can only access their assigned venue
-                    if user.get('venue_id') != venue_id:
-                        venue_access = False
             
             # Check specific permissions
             required_perms_set = set(required_permissions)
@@ -97,38 +70,25 @@ class RolePermissionService:
                     user_role, required_permissions
                 )
             
-            overall_permission = (
-                has_all_permissions and 
-                workspace_access and 
-                venue_access
-            )
-            
             denied_reason = None
-            if not overall_permission:
-                if not workspace_access:
-                    denied_reason = "Access denied: Different workspace"
-                elif not venue_access:
-                    denied_reason = "Access denied: No venue access"
-                elif not has_all_permissions:
-                    denied_reason = f"Missing permissions: {', '.join(required_perms_set - user_permissions)}"
+            if not has_all_permissions:
+                missing_perms = required_perms_set - user_permissions
+                denied_reason = f"Missing permissions: {', '.join(missing_perms)}"
             
             return PermissionCheck(
-                has_permission=overall_permission,
-                user_role=user_role,
-                venue_access=venue_access,
-                workspace_access=workspace_access,
-                specific_permissions=list(user_permissions),
-                denied_reason=denied_reason
+                has_permission=has_all_permissions,
+                reason=denied_reason,
+                required_role=None,
+                user_role=user_role
             )
             
         except Exception as e:
             logger.error(f"Permission validation error: {e}")
             return PermissionCheck(
                 has_permission=False,
-                user_role=UserRole.OPERATOR,
-                venue_access=False,
-                workspace_access=False,
-                denied_reason=f"Permission check failed: {str(e)}"
+                reason=f"Permission check failed: {str(e)}",
+                required_role=None,
+                user_role=UserRole.OPERATOR
             )
     
     def _check_role_based_permissions(self, role: UserRole, required_permissions: List[str]) -> bool:
@@ -141,17 +101,19 @@ class RolePermissionService:
         # Admin has most permissions except workspace-level ones
         if role == UserRole.ADMIN:
             admin_denied_permissions = [
-                "workspace:delete", "workspace:settings",
-                "user:create", "user:delete", "role:manage",
-                "venue:create", "venue:delete"
+                "workspace.delete", "workspace.manage", "workspace:delete", "workspace:settings",
+                "user.create", "user.delete", "user:create", "user:delete", "role:manage",
+                "venue.create", "venue.delete", "venue:create", "venue:delete"
             ]
             return not any(perm in admin_denied_permissions for perm in required_permissions)
         
         # Operator has very limited permissions
         if role == UserRole.OPERATOR:
             operator_allowed_permissions = [
-                "venue:read", "order:read", "order:update_status",
-                "table:read", "table:update_status", "customer:read"
+                "venue.read", "venue:read", 
+                "order.read", "order.update", "order:read", "order:update_status",
+                "table.read", "table.update", "table:read", "table:update_status", 
+                "customer:read", "analytics.read"
             ]
             return all(perm in operator_allowed_permissions for perm in required_permissions)
         
@@ -169,25 +131,18 @@ class RolePermissionService:
         manager_role = UserRole(manager.get('role', 'operator'))
         target_role = UserRole(target.get('role', 'operator'))
         
-        # Same workspace check
-        if manager.get('workspace_id') != target.get('workspace_id'):
-            return False
-        
         # Role hierarchy check
         manager_level = self.role_hierarchy.get(manager_role, 0)
         target_level = self.role_hierarchy.get(target_role, 0)
         
-        # Can only manage users with lower or equal hierarchy level
+        # Can only manage users with lower hierarchy level
         if manager_level <= target_level:
             return False
         
         # Additional rules
         if manager_role == UserRole.ADMIN:
-            # Admin can only manage operators in their venue
-            if target_role == UserRole.OPERATOR:
-                return target.get('venue_id') in manager.get('venue_access', [])
-            else:
-                return False
+            # Admin can only manage operators
+            return target_role == UserRole.OPERATOR
         
         return True
     
@@ -199,21 +154,23 @@ class RolePermissionService:
             return []
         
         user_role = UserRole(user.get('role', 'operator'))
-        workspace_id = user.get('workspace_id')
         
+        # Since workspace_id and venue_id fields removed from users schema,
+        # venue access needs to be managed differently
+        # For now, return all venues based on role
         if user_role == UserRole.SUPERADMIN:
-            # SuperAdmin can access all venues in workspace
-            workspace = await self.workspace_repo.get_by_id(workspace_id)
-            return workspace.get('venue_ids', []) if workspace else []
+            # SuperAdmin can access all venues
+            all_venues = await self.venue_repo.get_all()
+            return [venue['id'] for venue in all_venues]
         
         elif user_role == UserRole.ADMIN:
-            # Admin can access assigned venues
-            return user.get('venue_access', [])
+            # Admin can access venues they manage
+            admin_venues = await self.venue_repo.get_by_admin(user_id)
+            return [venue['id'] for venue in admin_venues]
         
         elif user_role == UserRole.OPERATOR:
-            # Operator can only access their assigned venue
-            venue_id = user.get('venue_id')
-            return [venue_id] if venue_id else []
+            # Operator access would need to be managed through a separate mapping
+            return []
         
         return []
     
@@ -227,14 +184,10 @@ class RolePermissionService:
             # SuperAdmin is workspace-level, not venue-specific
             return True
         
-        # Check if venue already has a user with this role
-        existing_users = await self.user_repo.query([
-            ('venue_id', '==', venue_id),
-            ('role', '==', role.value),
-            ('is_active', '==', True)
-        ])
-        
-        return len(existing_users) == 0
+        # Since venue_id field removed from users schema,
+        # this constraint check would need alternative logic
+        # For now, allow multiple users per venue
+        return True
     
     async def create_venue_user(
         self, 
@@ -249,14 +202,14 @@ class RolePermissionService:
         # Validate creator permissions
         permission_check = await self.validate_user_permissions(
             creator_id, 
-            ["user:create", "user:create_operator"],
+            ["user.create", "user:create", "user:create_operator"],
             venue_id=venue_id
         )
         
         if not permission_check.has_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=permission_check.denied_reason
+                detail=permission_check.reason
             )
         
         # Get creator info
@@ -286,32 +239,21 @@ class RolePermissionService:
         
         new_user = {
             "id": user_id,
-            "workspace_id": creator.get('workspace_id'),
-            "venue_id": venue_id,
             "email": user_data['email'].lower(),
-            "phone": user_data.get('phone'),
-            "full_name": user_data['full_name'],
-            "role": target_role.value,
+            "mobile_number": user_data.get('mobile_number'),
+            "first_name": user_data.get('first_name', ''),
+            "last_name": user_data.get('last_name', ''),
+            "role_id": None,  # Will be set after role creation
             "hashed_password": get_password_hash(user_data['password']),
             "is_active": True,
             "is_verified": False,
-            "is_owner": False,
-            "permissions": self._get_role_permissions(target_role),
-            "venue_access": [venue_id] if target_role == UserRole.ADMIN else [],
-            "created_by": creator_id,
+            "email_verified": False,
+            "mobile_verified": False,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
         
         await self.user_repo.create(new_user)
-        
-        # Update workspace user count
-        workspace_id = creator.get('workspace_id')
-        workspace = await self.workspace_repo.get_by_id(workspace_id)
-        if workspace:
-            await self.workspace_repo.update(workspace_id, {
-                "total_users": workspace.get('total_users', 0) + 1
-            })
         
         logger.info(f"User created: {user_id} with role {target_role.value} for venue {venue_id}")
         
@@ -370,12 +312,12 @@ class RolePermissionService:
                 detail="Only SuperAdmin can switch venue context"
             )
         
-        # Validate venue belongs to user's workspace
+        # Validate venue exists
         venue = await self.venue_repo.get_by_id(target_venue_id)
-        if not venue or venue.get('workspace_id') != user.get('workspace_id'):
+        if not venue:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Venue not found in your workspace"
+                detail="Venue not found"
             )
         
         # Update user's current venue context
@@ -393,34 +335,81 @@ class RolePermissionService:
         
         if role == UserRole.SUPERADMIN:
             return [
+                # Workspace permissions
+                "workspace.read", "workspace.update", "workspace.manage",
                 "workspace:read", "workspace:update", "workspace:analytics",
+                
+                # Venue permissions
+                "venue.create", "venue.read", "venue.update", "venue.delete", "venue.manage",
                 "venue:create", "venue:read", "venue:update", "venue:delete",
                 "venue:switch", "venue:analytics", "venue:settings",
+                
+                # User permissions
+                "user.create", "user.read", "user.update", "user.delete",
                 "user:create", "user:read", "user:update", "user:delete",
                 "user:change_password", "role:manage",
+                
+                # Menu permissions
+                "menu.create", "menu.read", "menu.update", "menu.delete",
                 "menu:create", "menu:read", "menu:update", "menu:delete",
+                
+                # Order permissions
+                "order.create", "order.read", "order.update", "order.manage",
                 "order:read", "order:update", "order:analytics",
+                
+                # Table permissions
+                "table.create", "table.read", "table.update", "table.delete",
                 "table:create", "table:read", "table:update", "table:delete",
-                "customer:read", "customer:analytics"
+                
+                # Analytics permissions
+                "analytics.read", "customer:read", "customer:analytics"
             ]
         
         elif role == UserRole.ADMIN:
             return [
+                # Workspace permissions (limited)
+                "workspace.read", "workspace:read",
+                
+                # Venue permissions
+                "venue.read", "venue.update", "venue.manage",
                 "venue:read", "venue:update", "venue:analytics", "venue:settings",
-                "user:create_operator", "user:read", "user:update_operator",
-                "user:change_operator_password",
+                
+                # User permissions (limited)
+                "user.read", "user.update", "user:read", "user:update_operator",
+                "user:create_operator", "user:change_operator_password",
+                
+                # Menu permissions
+                "menu.create", "menu.read", "menu.update", "menu.delete",
                 "menu:create", "menu:read", "menu:update", "menu:delete",
+                
+                # Order permissions
+                "order.create", "order.read", "order.update", "order.manage",
                 "order:read", "order:update", "order:analytics",
+                
+                # Table permissions
+                "table.create", "table.read", "table.update", "table.delete",
                 "table:create", "table:read", "table:update", "table:delete",
-                "customer:read", "customer:analytics"
+                
+                # Analytics permissions
+                "analytics.read", "customer:read", "customer:analytics"
             ]
         
         elif role == UserRole.OPERATOR:
             return [
-                "venue:read",
-                "order:read", "order:update_status",
-                "table:read", "table:update_status",
-                "customer:read"
+                # Venue permissions (read only)
+                "venue.read", "venue:read",
+                
+                # Order permissions (operational)
+                "order.read", "order.update", "order:read", "order:update_status",
+                
+                # Table permissions (operational)
+                "table.read", "table.update", "table:read", "table:update_status",
+                
+                # Menu permissions (read only)
+                "menu.read", "menu:read",
+                
+                # Analytics permissions (limited)
+                "analytics.read", "customer:read"
             ]
         
         return []

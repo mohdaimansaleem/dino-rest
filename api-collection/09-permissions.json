@@ -1,0 +1,560 @@
+		{
+			"name": "🔐 Permission Management",
+			"description": "Permission management endpoints for creating and managing granular permissions",
+			"item": [
+				{
+					"name": "Get All Permissions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has permissions array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/?page=1&page_size=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								},
+								{
+									"key": "name",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "resource",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "action",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "scope",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of permissions with optional filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permission by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has permission data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"    pm.expect(jsonData).to.have.property('resource');",
+									"    pm.expect(jsonData).to.have.property('action');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/{{permission_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "{{permission_id}}"]
+						},
+						"description": "Get specific permission by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Permission",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has permission data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    ",
+									"    // Store created permission ID",
+									"    pm.environment.set('created_permission_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"menu.create\",\n    \"description\": \"Create new menu items and categories\",\n    \"resource\": \"menu\",\n    \"action\": \"create\",\n    \"scope\": \"venue\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", ""]
+						},
+						"description": "Create a new permission. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Permission",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Create and manage menu items and categories with full control\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/{{created_permission_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "{{created_permission_id}}"]
+						},
+						"description": "Update permission information."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permissions by Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has categories array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"    if (jsonData.length > 0) {",
+									"        pm.expect(jsonData[0]).to.have.property('name');",
+									"        pm.expect(jsonData[0]).to.have.property('permissions');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/by-category",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "by-category"]
+						},
+						"description": "Get permissions grouped by category (resource)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permission Matrix",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has matrix data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('resources');",
+									"    pm.expect(jsonData).to.have.property('actions');",
+									"    pm.expect(jsonData).to.have.property('matrix');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/matrix",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "matrix"]
+						},
+						"description": "Get permission matrix (resources vs actions)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Resources",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has resources array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/resources",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "resources"]
+						},
+						"description": "Get all available resource names."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Actions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has actions array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/actions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "actions"]
+						},
+						"description": "Get all available action names."
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Create Permissions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has bulk creation data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"    pm.expect(jsonData).to.have.property('created');",
+									"    pm.expect(jsonData).to.have.property('skipped');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"permissions\": [\n        {\n            \"name\": \"order.view\",\n            \"description\": \"View orders\",\n            \"resource\": \"order\",\n            \"action\": \"read\",\n            \"scope\": \"venue\"\n        },\n        {\n            \"name\": \"order.update\",\n            \"description\": \"Update order status\",\n            \"resource\": \"order\",\n            \"action\": \"update\",\n            \"scope\": \"venue\"\n        },\n        {\n            \"name\": \"table.view\",\n            \"description\": \"View tables\",\n            \"resource\": \"table\",\n            \"action\": \"read\",\n            \"scope\": \"venue\"\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/bulk-create",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "bulk-create"]
+						},
+						"description": "Create multiple permissions at once."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permission Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has statistics data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('total_permissions');",
+									"    pm.expect(jsonData).to.have.property('system_permissions');",
+									"    pm.expect(jsonData).to.have.property('permissions_by_resource');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "statistics"]
+						},
+						"description": "Get comprehensive permission statistics."
+					},
+					"response": []
+				},
+				{
+					"name": "Check Permission Name Availability",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has availability status', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('available');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/check-name?name=venue.manage",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "check-name"],
+							"query": [
+								{
+									"key": "name",
+									"value": "venue.manage"
+								},
+								{
+									"key": "exclude_id",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Check if permission name is available."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unused Permissions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has permissions array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/unused",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "unused"]
+						},
+						"description": "Get permissions not assigned to any role."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Permissions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has search results', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/?search=menu&resource=menu&action=create",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", ""],
+							"query": [
+								{
+									"key": "search",
+									"value": "menu"
+								},
+								{
+									"key": "resource",
+									"value": "menu"
+								},
+								{
+									"key": "action",
+									"value": "create"
+								}
+							]
+						},
+						"description": "Search permissions by name, resource, action, or description."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Permission",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/permissions/{{created_permission_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "permissions", "{{created_permission_id}}"]
+						},
+						"description": "Delete a permission (only if not assigned to any role)."
+					},
+					"response": []
+				}
+			]
+		},

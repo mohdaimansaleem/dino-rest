@@ -18,15 +18,12 @@ class UserRole(str, Enum):
     SUPERADMIN = "superadmin"  # Full workspace access, create venues, manage all
     ADMIN = "admin"           # Full venue access, manage operators
     OPERATOR = "operator"     # Limited access, view orders, update tables
-    CUSTOMER = "customer"     # Customer role for orders
-
 
 class BusinessType(str, Enum):
     """Business types"""
-    VENUE = "venue"
+    CAFE = "cafe"
     RESTAURANT = "restaurant"
     BOTH = "both"
-
 
 class SubscriptionPlan(str, Enum):
     """Subscription plans"""
@@ -34,13 +31,11 @@ class SubscriptionPlan(str, Enum):
     PREMIUM = "premium"
     ENTERPRISE = "enterprise"
 
-
 class SubscriptionStatus(str, Enum):
     """Subscription status"""
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
-
 
 class VenueStatus(str, Enum):
     """Venue operational status"""
@@ -49,7 +44,6 @@ class VenueStatus(str, Enum):
     MAINTENANCE = "maintenance"
     CLOSED = "closed"
 
-
 class WorkspaceStatus(str, Enum):
     """Workspace status"""
     ACTIVE = "active"
@@ -57,18 +51,16 @@ class WorkspaceStatus(str, Enum):
     TRIAL = "trial"
     EXPIRED = "expired"
 
-
 class OrderStatus(str, Enum):
     """Order status"""
     PENDING = "pending"
     CONFIRMED = "confirmed"
     PREPARING = "preparing"
     READY = "ready"
-    OUT_FOR_DELIVERY = "out_for_delivery"
-    DELIVERED = "delivered"
     SERVED = "served"
+    DELIVERED = "delivered"
+    OUT_FOR_DELIVERY = "out_for_delivery"
     CANCELLED = "cancelled"
-
 
 class PaymentStatus(str, Enum):
     """Payment status"""
@@ -79,7 +71,6 @@ class PaymentStatus(str, Enum):
     REFUNDED = "refunded"
     PARTIALLY_REFUNDED = "partially_refunded"
 
-
 class PaymentMethod(str, Enum):
     """Payment methods"""
     CASH = "cash"
@@ -87,7 +78,6 @@ class PaymentMethod(str, Enum):
     UPI = "upi"
     WALLET = "wallet"
     NET_BANKING = "net_banking"
-
 
 class PaymentGateway(str, Enum):
     """Payment gateways"""
@@ -97,13 +87,10 @@ class PaymentGateway(str, Enum):
     PAYTM = "paytm"
     CASH = "cash"
 
-
 class OrderType(str, Enum):
     """Order types"""
     DINE_IN = "dine_in"
     TAKEAWAY = "takeaway"
-    DELIVERY = "delivery"
-
 
 class OrderSource(str, Enum):
     """Order source types"""
@@ -112,7 +99,6 @@ class OrderSource(str, Enum):
     ONLINE = "online"
     PHONE = "phone"
 
-
 class TableStatus(str, Enum):
     """Table status"""
     AVAILABLE = "available"
@@ -120,7 +106,6 @@ class TableStatus(str, Enum):
     OCCUPIED = "occupied"
     MAINTENANCE = "maintenance"
     OUT_OF_SERVICE = "out_of_service"
-
 
 class NotificationType(str, Enum):
     """Notification types"""
@@ -131,13 +116,11 @@ class NotificationType(str, Enum):
     PAYMENT_RECEIVED = "payment_received"
     SYSTEM_ALERT = "system_alert"
 
-
 class TransactionType(str, Enum):
     """Transaction types"""
     PAYMENT = "payment"
     REFUND = "refund"
     ADJUSTMENT = "adjustment"
-
 
 class FeedbackType(str, Enum):
     """Feedback types"""
@@ -147,14 +130,12 @@ class FeedbackType(str, Enum):
     AMBIANCE = "ambiance"
     OVERALL = "overall"
 
-
 class PriceRange(str, Enum):
     """Price ranges"""
     BUDGET = "budget"
     MID_RANGE = "mid_range"
     PREMIUM = "premium"
     LUXURY = "luxury"
-
 
 class SpiceLevel(str, Enum):
     """Spice levels"""
@@ -163,15 +144,6 @@ class SpiceLevel(str, Enum):
     HOT = "hot"
     EXTRA_HOT = "extra_hot"
 
-
-class Gender(str, Enum):
-    """Gender options"""
-    MALE = "male"
-    FEMALE = "female"
-    OTHER = "other"
-    PREFER_NOT_TO_SAY = "prefer_not_to_say"
-
-
 class Priority(str, Enum):
     """Priority levels"""
     LOW = "low"
@@ -179,20 +151,17 @@ class Priority(str, Enum):
     HIGH = "high"
     URGENT = "urgent"
 
-
 class RecipientType(str, Enum):
     """Notification recipient types"""
     USER = "user"
     VENUE = "venue"
     WORKSPACE = "workspace"
 
-
 class CustomerType(str, Enum):
     """Customer types"""
     NEW = "new"
     RETURNING = "returning"
     VIP = "vip"
-
 
 # =============================================================================
 # BASE MODELS
@@ -206,17 +175,14 @@ class BaseSchema(BaseModel):
             datetime: lambda v: v.isoformat()
         }
 
-
 class TimestampMixin(BaseModel):
     """Mixin for timestamp fields"""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-
 # =============================================================================
 # LOCATION AND CONTACT SCHEMAS
 # =============================================================================
-
 class VenueLocation(BaseModel):
     """Venue location details"""
     address: str = Field(..., min_length=10, max_length=500)
@@ -224,10 +190,7 @@ class VenueLocation(BaseModel):
     state: str = Field(..., min_length=2, max_length=100)
     country: str = Field(..., min_length=2, max_length=100)
     postal_code: str = Field(..., min_length=3, max_length=20)
-    latitude: Optional[float] = Field(None, ge=-90, le=90)
-    longitude: Optional[float] = Field(None, ge=-180, le=180)
     landmark: Optional[str] = Field(None, max_length=200)
-
 
 class VenueOperatingHours(BaseModel):
     """Operating hours for a venue"""
@@ -239,86 +202,45 @@ class VenueOperatingHours(BaseModel):
     break_start: Optional[time] = Field(None, description="Break start time (optional)")
     break_end: Optional[time] = Field(None, description="Break end time (optional)")
 
-
 # =============================================================================
-# WORKSPACE SCHEMAS
+# WORKSPACE SCHEMAS (Optimized)
 # =============================================================================
-
 class WorkspaceBase(BaseSchema):
     """Base workspace schema"""
-    display_name: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
-    business_type: BusinessType
-
 
 class WorkspaceCreate(WorkspaceBase):
     """Schema for creating workspace"""
     pass
 
-
 class WorkspaceUpdate(BaseSchema):
     """Schema for updating workspace"""
-    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
-    business_type: Optional[BusinessType] = None
     is_active: Optional[bool] = None
-
 
 class Workspace(WorkspaceBase, TimestampMixin):
     """Complete workspace schema"""
     id: str
-    name: str  # Auto-generated unique name
-    owner_id: str
     venue_ids: List[str] = Field(default_factory=list)
     is_active: bool = Field(default=True)
 
-
 # =============================================================================
-# USER SCHEMAS
+# USER SCHEMAS (Optimized)
 # =============================================================================
-
-class UserAddress(BaseSchema):
-    """User address schema"""
-    id: Optional[str] = None
-    label: str = Field(..., min_length=1, max_length=50)
-    address_line_1: str = Field(..., min_length=5, max_length=200)
-    address_line_2: Optional[str] = Field(None, max_length=200)
-    city: str = Field(..., min_length=2, max_length=100)
-    state: str = Field(..., min_length=2, max_length=100)
-    postal_code: str = Field(..., min_length=5, max_length=10)
-    country: str = Field(default="India", max_length=100)
-    latitude: Optional[float] = Field(None, ge=-90, le=90)
-    longitude: Optional[float] = Field(None, ge=-180, le=180)
-    is_default: bool = Field(default=False)
-
-
-class UserPreferences(BaseSchema):
-    """User preferences schema"""
-    dietary_restrictions: List[str] = Field(default_factory=list)
-    favorite_cuisines: List[str] = Field(default_factory=list)
-    spice_level: Optional[str] = Field(None, pattern="^(mild|medium|hot|extra_hot)$")
-    notifications_enabled: bool = Field(default=True)
-    email_notifications: bool = Field(default=True)
-    sms_notifications: bool = Field(default=False)
-
-
 class UserBase(BaseSchema):
     """Base user schema"""
     email: EmailStr
-    phone: str = Field(..., pattern="^[+]?[1-9]?[0-9]{7,15}$")
+    mobile_number: str = Field(..., pattern="^[+]?[1-9]?[0-9]{7,15}$", description="Unique mobile number")
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
-
 
 class UserCreate(UserBase):
     """Schema for creating users"""
     password: str = Field(..., min_length=8, max_length=128)
     confirm_password: str = Field(..., min_length=8, max_length=128)
-    role_id: Optional[str] = None  # Role ID for database reference
-    workspace_id: Optional[str] = None
-    venue_id: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    gender: Optional[Gender] = None
+    role_id: Optional[str] = None
 
     @validator('confirm_password')
     def passwords_match(cls, v, values, **kwargs):
@@ -338,93 +260,73 @@ class UserCreate(UserBase):
             raise ValueError('Password must contain at least one digit')
         return v
 
-
 class UserLogin(BaseSchema):
     """User login schema"""
     email: EmailStr
     password: str
     remember_me: bool = Field(default=False)
 
-
 class UserUpdate(BaseSchema):
     """Schema for updating users"""
     first_name: Optional[str] = Field(None, min_length=1, max_length=50)
     last_name: Optional[str] = Field(None, min_length=1, max_length=50)
-    phone: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$")
-    date_of_birth: Optional[date] = None
-    gender: Optional[Gender] = None
+    mobile_number: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$")
     is_active: Optional[bool] = None
-
 
 class User(UserBase, TimestampMixin):
     """Complete user schema"""
     id: str
-    workspace_id: Optional[str] = None
-    venue_id: Optional[str] = None
-    role_id: Optional[str] = None  # Role ID for database reference
-    date_of_birth: Optional[date] = None
-    gender: Optional[Gender] = None
+    role_id: Optional[str] = None
     is_active: bool = Field(default=True)
     is_verified: bool = Field(default=False)
     email_verified: bool = Field(default=False)
-    phone_verified: bool = Field(default=False)
+    mobile_verified: bool = Field(default=False)
     last_login: Optional[datetime] = None
-
 
 # =============================================================================
 # VENUE SCHEMAS (Unified from Cafe)
 # =============================================================================
-
 class VenueBase(BaseSchema):
     """Base venue schema"""
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., max_length=1000)
     location: VenueLocation
-    phone: str = Field(..., pattern="^[+]?[1-9]?[0-9]{7,15}$")
+    mobile_number: str = Field(..., pattern="^[+]?[1-9]?[0-9]{7,15}$")
     email: EmailStr
     website: Optional[HttpUrl] = None
     cuisine_types: List[str] = Field(default_factory=list)
     price_range: PriceRange
-    operating_hours: List[VenueOperatingHours] = Field(default_factory=list)
     subscription_plan: SubscriptionPlan = SubscriptionPlan.BASIC
     subscription_status: SubscriptionStatus = SubscriptionStatus.ACTIVE
 
-
 class VenueCreate(VenueBase):
     """Schema for creating venues"""
-    workspace_id: str
     admin_id: Optional[str] = None  # Will be set automatically
-
 
 class VenueUpdate(BaseSchema):
     """Schema for updating venues"""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=1000)
-    phone: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$")
+    mobile_number: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$")
     email: Optional[EmailStr] = None
     website: Optional[HttpUrl] = None
     logo_url: Optional[HttpUrl] = None
     cuisine_types: Optional[List[str]] = None
     price_range: Optional[PriceRange] = None
-    operating_hours: Optional[List[VenueOperatingHours]] = None
     subscription_plan: Optional[SubscriptionPlan] = None
     subscription_status: Optional[SubscriptionStatus] = None
     status: Optional[VenueStatus] = None
     is_active: Optional[bool] = None
 
-
 class Venue(VenueBase, TimestampMixin):
     """Complete venue schema"""
     id: str
-    workspace_id: str
     admin_id: Optional[str] = None
     logo_url: Optional[HttpUrl] = None
     status: VenueStatus = VenueStatus.ACTIVE
     is_active: bool = Field(default=True)
-    is_verified: bool = Field(default=False)
     rating: float = Field(default=0.0, ge=0, le=5)
     total_reviews: int = Field(default=0)
-
 
 class VenuePublicInfo(BaseModel):
     """Public venue information for QR access"""
@@ -433,7 +335,7 @@ class VenuePublicInfo(BaseModel):
     description: Optional[str] = None
     cuisine_types: List[str] = Field(default_factory=list)
     location: VenueLocation
-    phone: str
+    mobile_number: str
     website: Optional[str] = None
     price_range: Optional[str] = None
     features: List[str] = Field(default_factory=list)
@@ -442,28 +344,23 @@ class VenuePublicInfo(BaseModel):
     rating: float = Field(default=0.0)
     total_reviews: int = Field(default=0)
 
-
 # =============================================================================
 # MENU SCHEMAS
 # =============================================================================
-
 class MenuCategoryBase(BaseSchema):
     """Base menu category schema"""
     name: str = Field(..., min_length=1, max_length=50)
     description: Optional[str] = Field(None, max_length=200)
 
-
 class MenuCategoryCreate(MenuCategoryBase):
     """Schema for creating menu categories"""
     venue_id: str
-
 
 class MenuCategoryUpdate(BaseSchema):
     """Schema for updating menu categories"""
     name: Optional[str] = Field(None, min_length=1, max_length=50)
     description: Optional[str] = Field(None, max_length=200)
     is_active: Optional[bool] = None
-
 
 class MenuCategory(MenuCategoryBase, TimestampMixin):
     """Complete menu category schema"""
@@ -472,12 +369,6 @@ class MenuCategory(MenuCategoryBase, TimestampMixin):
     image_url: Optional[str] = None
     is_active: bool = Field(default=True)
 
-
-class NutritionalInfo(BaseSchema):
-    """Nutritional information schema"""
-    calories: Optional[int] = Field(None, ge=0)
-
-
 class MenuItemBase(BaseSchema):
     """Base menu item schema"""
     name: str = Field(..., min_length=1, max_length=100)
@@ -485,32 +376,23 @@ class MenuItemBase(BaseSchema):
     base_price: float = Field(..., gt=0)
     category_id: str
     is_vegetarian: bool = Field(default=True)
-    is_vegan: bool = Field(default=False)
-    is_gluten_free: bool = Field(default=False)
     spice_level: SpiceLevel = SpiceLevel.MILD
     preparation_time_minutes: int = Field(..., ge=5, le=120)
-    nutritional_info: Optional[NutritionalInfo] = None
-
 
 class MenuItemCreate(MenuItemBase):
     """Schema for creating menu items"""
     venue_id: str
 
-
 class MenuItemUpdate(BaseSchema):
     """Schema for updating menu items"""
-    name: Optional[str] = Field(None, min_length=1, max_length=50)
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=1000)
     base_price: Optional[float] = Field(None, gt=0)
     category_id: Optional[str] = None
     is_vegetarian: Optional[bool] = None
-    is_vegan: Optional[bool] = None
-    is_gluten_free: Optional[bool] = None
     spice_level: Optional[SpiceLevel] = None
     preparation_time_minutes: Optional[int] = Field(None, ge=5, le=120)
-    nutritional_info: Optional[NutritionalInfo] = None
     is_available: Optional[bool] = None
-
 
 class MenuItem(MenuItemBase, TimestampMixin):
     """Complete menu item schema"""
@@ -520,22 +402,18 @@ class MenuItem(MenuItemBase, TimestampMixin):
     is_available: bool = Field(default=True)
     rating: float = Field(default=0.0, ge=0, le=5)
 
-
 # =============================================================================
 # TABLE SCHEMAS
 # =============================================================================
-
 class TableBase(BaseSchema):
     """Base table schema"""
     table_number: int = Field(..., ge=1)
     capacity: int = Field(..., ge=1, le=20)
     location: Optional[str] = Field(None, max_length=100)
 
-
 class TableCreate(TableBase):
     """Schema for creating tables"""
     venue_id: str
-
 
 class TableUpdate(BaseSchema):
     """Schema for updating tables"""
@@ -544,43 +422,29 @@ class TableUpdate(BaseSchema):
     table_status: Optional[TableStatus] = None
     is_active: Optional[bool] = None
 
-
 class Table(TableBase, TimestampMixin):
     """Complete table schema"""
     id: str
     venue_id: str
-    qr_code: str  # Encrypted venue_id + table_number
-    qr_code_url: Optional[str] = None
     table_status: TableStatus = TableStatus.AVAILABLE
     is_active: bool = Field(default=True)
-
 
 # =============================================================================
 # CUSTOMER SCHEMAS
 # =============================================================================
-
 class CustomerBase(BaseSchema):
     """Base customer schema"""
     name: str = Field(..., min_length=1, max_length=100)
-    phone: str = Field(..., pattern="^[+]?[1-9]?[0-9]{7,15}$")
-    email: Optional[EmailStr] = None
-
+    mobile_number: str = Field(..., pattern="^[+]?[1-9]?[0-9]{7,15}$")
 
 class CustomerCreate(CustomerBase):
     """Schema for creating customers"""
-    date_of_birth: Optional[datetime] = None
-    preferences: Optional[Dict[str, Any]] = Field(default_factory=dict)
-    dietary_restrictions: Optional[List[str]] = Field(default_factory=list)
-    marketing_consent: bool = Field(default=False)
-
+    pass
 
 class CustomerUpdate(BaseSchema):
     """Schema for updating customers"""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
-    phone: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$")
-    email: Optional[EmailStr] = None
-    is_active: Optional[bool] = None
-
+    mobile_number: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$")
 
 class Customer(CustomerBase, TimestampMixin):
     """Complete customer schema"""
@@ -590,37 +454,27 @@ class Customer(CustomerBase, TimestampMixin):
     total_spent: float = Field(default=0.0)
     last_order_date: Optional[datetime] = None
     favorite_venue_id: Optional[str] = None
-    preferences: Dict[str, Any] = Field(default_factory=dict)
-    dietary_restrictions: List[str] = Field(default_factory=list)
     loyalty_points: int = Field(default=0)
     marketing_consent: bool = Field(default=False)
-    is_active: bool = Field(default=True)
-
 
 # =============================================================================
 # ORDER SCHEMAS
 # =============================================================================
-
 class OrderItemBase(BaseSchema):
     """Base order item schema"""
     menu_item_id: str
     menu_item_name: str
-    variant_id: Optional[str] = None
-    variant_name: Optional[str] = None
     quantity: int = Field(..., ge=1)
     unit_price: float = Field(..., gt=0)
     total_price: float = Field(..., gt=0)
     special_instructions: Optional[str] = Field(None, max_length=500)
 
-
 class OrderItemCreate(BaseSchema):
     """Schema for creating order items"""
     menu_item_id: str
-    variant_id: Optional[str] = None
     quantity: int = Field(..., ge=1, le=50)
     customizations: Optional[Dict[str, Any]] = Field(default_factory=dict)
     special_instructions: Optional[str] = Field(None, max_length=500)
-
 
 class OrderBase(BaseSchema):
     """Base order schema"""
@@ -630,11 +484,9 @@ class OrderBase(BaseSchema):
     table_id: Optional[str] = None
     special_instructions: Optional[str] = Field(None, max_length=1000)
 
-
 class OrderCreate(OrderBase):
     """Schema for creating orders"""
     items: List[OrderItemCreate] = Field(..., min_items=1)
-
 
 class PublicOrderCreate(BaseModel):
     """Schema for creating orders from public interface (QR scan)"""
@@ -644,8 +496,6 @@ class PublicOrderCreate(BaseModel):
     items: List[OrderItemCreate] = Field(..., min_items=1, max_items=50)
     order_type: OrderSource = OrderSource.QR_SCAN
     special_instructions: Optional[str] = Field(None, max_length=1000)
-    estimated_guests: Optional[int] = Field(None, ge=1, le=20)
-
 
 class OrderUpdate(BaseSchema):
     """Schema for updating orders"""
@@ -653,7 +503,6 @@ class OrderUpdate(BaseSchema):
     payment_status: Optional[PaymentStatus] = None
     estimated_ready_time: Optional[datetime] = None
     special_instructions: Optional[str] = Field(None, max_length=1000)
-
 
 class Order(OrderBase, TimestampMixin):
     """Complete order schema"""
@@ -670,11 +519,9 @@ class Order(OrderBase, TimestampMixin):
     estimated_ready_time: Optional[datetime] = None
     actual_ready_time: Optional[datetime] = None
 
-
 # =============================================================================
 # TRANSACTION SCHEMAS
 # =============================================================================
-
 class TransactionBase(BaseSchema):
     """Base transaction schema"""
     venue_id: str
@@ -687,11 +534,9 @@ class TransactionBase(BaseSchema):
     gateway_response: Optional[Dict[str, Any]] = None
     status: PaymentStatus
 
-
 class TransactionCreate(TransactionBase):
     """Schema for creating transactions"""
     pass
-
 
 class Transaction(TransactionBase, TimestampMixin):
     """Complete transaction schema"""
@@ -699,11 +544,9 @@ class Transaction(TransactionBase, TimestampMixin):
     processed_at: Optional[datetime] = None
     refunded_amount: float = Field(default=0.0, ge=0)
 
-
 # =============================================================================
 # NOTIFICATION SCHEMAS
 # =============================================================================
-
 class NotificationBase(BaseSchema):
     """Base notification schema"""
     recipient_id: str
@@ -714,11 +557,9 @@ class NotificationBase(BaseSchema):
     data: Optional[Dict[str, Any]] = None
     priority: Priority = Priority.NORMAL
 
-
 class NotificationCreate(NotificationBase):
     """Schema for creating notifications"""
     pass
-
 
 class Notification(NotificationBase, TimestampMixin):
     """Complete notification schema"""
@@ -726,11 +567,9 @@ class Notification(NotificationBase, TimestampMixin):
     is_read: bool = Field(default=False)
     read_at: Optional[datetime] = None
 
-
 # =============================================================================
 # REVIEW SCHEMAS
 # =============================================================================
-
 class ReviewBase(BaseSchema):
     """Base review schema"""
     venue_id: str
@@ -740,11 +579,9 @@ class ReviewBase(BaseSchema):
     comment: Optional[str] = Field(None, max_length=1000)
     feedback_type: FeedbackType = FeedbackType.OVERALL
 
-
 class ReviewCreate(ReviewBase):
     """Schema for creating reviews"""
     pass
-
 
 class ReviewUpdate(BaseSchema):
     """Schema for updating reviews"""
@@ -752,66 +589,67 @@ class ReviewUpdate(BaseSchema):
     comment: Optional[str] = Field(None, max_length=1000)
     is_verified: Optional[bool] = None
 
-
 class Review(ReviewBase, TimestampMixin):
     """Complete review schema"""
     id: str
     is_verified: bool = Field(default=False)
     helpful_count: int = Field(default=0)
 
-
 # =============================================================================
 # ROLE AND PERMISSION SCHEMAS
 # =============================================================================
-
 class RoleBase(BaseSchema):
     """Base role schema"""
     name: UserRole
     description: str = Field(..., max_length=500)
     permission_ids: List[str] = Field(default_factory=list)
 
-
 class RoleCreate(RoleBase):
     """Schema for creating roles"""
     pass
-
 
 class RoleUpdate(BaseSchema):
     """Schema for updating roles"""
     description: Optional[str] = Field(None, max_length=500)
     permission_ids: Optional[List[str]] = None
 
-
 class Role(RoleBase, TimestampMixin):
     """Complete role schema"""
     id: str
-    is_system_role: bool = Field(default=True)
-
 
 class PermissionBase(BaseSchema):
     """Base permission schema"""
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., max_length=500)
-    resource: str = Field(..., pattern="^(workspace|venue|menu|order|user|analytics|table)$")
-    action: str = Field(..., pattern="^(create|read|update|delete|manage)$")
-    scope: str = Field(..., pattern="^(own|venue|workspace|all)$")
-
+    resource: str = Field(..., pattern="^(workspace|venue|menu|order|user|analytics|table|dashboard|cafe|orders|tables|users|settings|qr|reports|notifications|profile|password)$")
+    action: str = Field(..., pattern="^(create|read|update|delete|manage|view|activate|deactivate|switch|generate|print)$")
+    scope: str = Field(..., pattern="^(own|venue|workspace|all|system)$")
+    
+    @validator('name')
+    def validate_name_format(cls, v):
+        """Validate permission name format - allow both dot and colon separators"""
+        if '.' in v or ':' in v:
+            # Split by either . or :
+            parts = v.replace(':', '.').split('.')
+            if len(parts) >= 2:
+                return v
+        # If no separator, check if it follows resource.action format
+        if '.' not in v and ':' not in v:
+            raise ValueError('Name must follow resource.action format (e.g., venue.read)')
+        return v
 
 class PermissionCreate(PermissionBase):
     """Schema for creating permissions"""
     pass
 
-
 class PermissionUpdate(BaseSchema):
     """Schema for updating permissions"""
     description: Optional[str] = Field(None, max_length=500)
-
 
 class Permission(PermissionBase, TimestampMixin):
     """Complete permission schema"""
     id: str
     is_system_permission: bool = Field(default=True)
-
 
 class PermissionCheck(BaseSchema):
     """Permission check result"""
@@ -819,38 +657,19 @@ class PermissionCheck(BaseSchema):
     reason: Optional[str] = None
     required_role: Optional[UserRole] = None
     user_role: Optional[UserRole] = None
-
-
+    
 # =============================================================================
 # WORKSPACE ONBOARDING SCHEMAS
 # =============================================================================
 
-class OwnerDetails(BaseModel):
+class UserDetails(BaseModel):
     """Owner/SuperAdmin details for workspace creation"""
     full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    phone: str = Field(..., min_length=10, max_length=20)
+    mobile_number: str = Field(..., min_length=10, max_length=20)
     password: str = Field(..., min_length=8, max_length=128)
     date_of_birth: Optional[datetime] = None
     address: Optional[str] = Field(None, max_length=500)
-    emergency_contact: Optional[str] = Field(None, max_length=20)
-    id_proof_type: Optional[str] = Field(None, max_length=50)
-    id_proof_number: Optional[str] = Field(None, max_length=50)
-
-
-class WorkspaceOnboardingCreate(BaseModel):
-    """Complete workspace onboarding schema"""
-    workspace_name: str = Field(..., min_length=2, max_length=100)
-    business_type: str = Field(..., min_length=2, max_length=50)
-    business_registration_number: Optional[str] = Field(None, max_length=50)
-    tax_id: Optional[str] = Field(None, max_length=50)
-    default_venue: VenueCreate
-    owner_details: OwnerDetails
-    subscription_plan: str = Field(default="trial")
-    billing_address: Optional[VenueLocation] = None
-    terms_accepted: bool = Field(..., description="Must accept terms and conditions")
-    marketing_consent: bool = Field(default=False)
-
 
 class WorkspaceRegistration(BaseSchema):
     """Workspace registration schema"""
@@ -862,22 +681,23 @@ class WorkspaceRegistration(BaseSchema):
     venue_name: str = Field(..., min_length=1, max_length=100, alias="venueName")
     venue_description: Optional[str] = Field(None, max_length=1000, alias="venueDescription")
     venue_location: VenueLocation = Field(..., alias="venueLocation")
-    venue_phone: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$", alias="venuePhone")
+    venue_mobile: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$", alias="venueMobile")
     venue_email: Optional[EmailStr] = Field(None, alias="venueEmail")
     venue_website: Optional[HttpUrl] = Field(None, alias="venueWebsite")
     price_range: PriceRange = Field(..., alias="priceRange")
-    venu_type: BusinessType = Field(..., alias="venuType")
     
     # Owner details
     owner_email: EmailStr = Field(..., alias="ownerEmail")
+    owner_mobile: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$", alias="ownerMobile")
     owner_phone: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$", alias="ownerPhone")
+    venue_phone: Optional[str] = Field(None, pattern="^[+]?[1-9]?[0-9]{7,15}$", alias="venuePhone")
     owner_first_name: str = Field(..., min_length=1, max_length=50, alias="ownerFirstName")
     owner_last_name: str = Field(..., min_length=1, max_length=50, alias="ownerLastName")
     owner_password: str = Field(..., min_length=8, max_length=128, alias="ownerPassword")
     confirm_password: str = Field(..., min_length=8, max_length=128, alias="confirmPassword")
     
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
     
     @validator('confirm_password')
     def passwords_match(cls, v, values, **kwargs):
@@ -896,6 +716,14 @@ class WorkspaceRegistration(BaseSchema):
         if not re.search(r"\d", v):
             raise ValueError('Password must contain at least one digit')
         return v
+    
+    def get_owner_mobile_number(self) -> Optional[str]:
+        """Get owner mobile number from any available field"""
+        return self.owner_mobile or self.owner_phone
+    
+    def get_venue_mobile_number(self) -> Optional[str]:
+        """Get venue mobile number from any available field"""
+        return self.venue_mobile or self.venue_phone or self.get_owner_mobile_number()
 
 
 # =============================================================================
@@ -948,35 +776,14 @@ class OrderValidationResponse(BaseModel):
 # ANALYTICS SCHEMAS
 # =============================================================================
 
-class PopularItem(BaseSchema):
-    """Popular item analytics"""
-    menu_item_id: str
-    menu_item_name: str
-    order_count: int
-    revenue: float
-
-
-class RevenueData(BaseSchema):
-    """Revenue data analytics"""
-    date: str
-    revenue: float
-    orders: int
-
-
-class StatusData(BaseSchema):
-    """Status data analytics"""
-    status: OrderStatus
-    count: int
-
-
 class SalesAnalytics(BaseSchema):
-    """Sales analytics schema"""
+    """Consolidated sales analytics schema"""
     total_revenue: float
     total_orders: int
     average_order_value: float
-    popular_items: List[PopularItem]
-    revenue_by_day: List[RevenueData]
-    orders_by_status: List[StatusData]
+    popular_items: List[Dict[str, Any]] = Field(default_factory=list)
+    revenue_by_day: List[Dict[str, Any]] = Field(default_factory=list)
+    orders_by_status: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class VenueAnalytics(BaseModel):
@@ -1080,7 +887,6 @@ class PaginatedResponse(BaseSchema):
     has_next: bool
     has_prev: bool
 
-
 class ErrorResponse(BaseSchema):
     """Error response"""
     success: bool = False
@@ -1088,7 +894,6 @@ class ErrorResponse(BaseSchema):
     error_code: Optional[str] = None
     details: Optional[Dict[str, Any]] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-
 
 class WorkspaceOnboardingResponse(BaseModel):
     """Response after successful workspace onboarding"""
@@ -1101,16 +906,6 @@ class WorkspaceOnboardingResponse(BaseModel):
     message: str
     next_steps: List[str] = Field(default_factory=list)
 
-
-class VenueCreationResponse(BaseModel):
-    """Response after venue creation"""
-    success: bool
-    venue_id: str
-    qr_codes_generated: int
-    tables_created: int
-    message: str
-
-
 class OrderCreationResponse(BaseModel):
     """Response after order creation"""
     success: bool
@@ -1121,12 +916,9 @@ class OrderCreationResponse(BaseModel):
     payment_required: bool
     message: str
     customer_id: str
-
-
 # =============================================================================
 # FILE UPLOAD SCHEMAS
 # =============================================================================
-
 class ImageUploadResponse(BaseSchema):
     """Image upload response"""
     success: bool = True
@@ -1136,7 +928,6 @@ class ImageUploadResponse(BaseSchema):
     content_type: str
     upload_timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-
 class BulkImageUploadResponse(BaseSchema):
     """Bulk image upload response"""
     success: bool = True
@@ -1144,27 +935,3 @@ class BulkImageUploadResponse(BaseSchema):
     failed_files: List[Dict[str, str]] = Field(default_factory=list)
     total_uploaded: int
     total_failed: int
-
-
-# =============================================================================
-# UTILITY FUNCTIONS
-# =============================================================================
-
-def migrate_legacy_fields(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Migrate legacy field names to current naming convention"""
-    # Map old field names to new ones
-    field_mappings = {
-        'cafe_id': 'venue_id',
-        'cafe_name': 'venue_name',
-        'cafe_description': 'venue_description',
-        'cafe_address': 'venue_address',
-        'cafe_phone': 'venue_phone',
-        'cafe_email': 'venue_email',
-        'cafe_website': 'venue_website'
-    }
-    
-    for old_field, new_field in field_mappings.items():
-        if old_field in data:
-            data[new_field] = data.pop(old_field)
-    
-    return data

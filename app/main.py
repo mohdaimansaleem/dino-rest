@@ -1,6 +1,6 @@
 """
 Dino E-Menu Backend API
-Production-ready FastAPI application for Google Cloud Run
+Simplified FastAPI application for Google Cloud Run
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,11 +8,18 @@ from contextlib import asynccontextmanager
 import os
 import logging
 
-# Setup basic logging first
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Setup enhanced logging first
+from app.core.logging_config import setup_enhanced_logging, get_logger
 
-# Try to import app components, but don't fail if they have issues
+# Determine log level from environment
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+enable_debug = os.environ.get("DEBUG", "false").lower() == "true"
+
+# Setup enhanced logging
+setup_enhanced_logging(log_level=log_level, enable_debug=enable_debug)
+logger = get_logger(__name__)
+
+# Import app components
 try:
     from app.core.config import settings
     logger.info("✅ Settings loaded successfully")
@@ -26,15 +33,20 @@ except Exception as e:
         GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "unknown")
         DATABASE_NAME = os.environ.get("DATABASE_NAME", "unknown")
         is_production = True
+        CORS_ORIGINS = ["*"]
+        CORS_ALLOW_CREDENTIALS = True
+        CORS_ALLOW_METHODS = ["*"]
+        CORS_ALLOW_HEADERS = ["*"]
     settings = MinimalSettings()
 
+# Initialize dependency injection
 try:
-    from app.core.logging_config import setup_logging, get_logger
-    setup_logging(settings.LOG_LEVEL)
-    logger = get_logger(__name__)
-    logger.info("✅ Logging configured successfully")
+    from app.core.dependency_injection import initialize_di, check_services_health
+    logger.info("✅ Dependency injection initialized successfully")
+    di_available = True
 except Exception as e:
-    logger.warning(f"⚠️ Advanced logging setup failed: {e}")
+    logger.warning(f"⚠️ Dependency injection initialization failed: {e}")
+    di_available = False
 
 try:
     from app.api.v1.api import api_router
@@ -53,9 +65,9 @@ async def lifespan(app: FastAPI):
     logger.info("Environment Variables:")
     logger.info(f"PORT: {os.environ.get('PORT', 'not set')}")
     logger.info(f"ENVIRONMENT: {os.environ.get('ENVIRONMENT', 'not set')}")
+    logger.info(f"DATABASE_NAME: {os.environ.get('DATABASE_NAME', 'not set')}")
     logger.info(f"GCP_PROJECT_ID: {os.environ.get('GCP_PROJECT_ID', 'not set')}")
     
-    # Skip complex initialization for faster startup
     logger.info("✅ Dino E-Menu API startup completed successfully")
     
     yield
@@ -65,23 +77,32 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI application
+docs_url = "/docs" if not settings.is_production else None
+redoc_url = "/redoc" if not settings.is_production else None
+
 app = FastAPI(
     title="Dino E-Menu API",
-    description="A comprehensive e-menu solution for restaurants and cafes",
-    version="1.0.0",
+    description="A comprehensive e-menu solution for restaurants and cafes with role-based access control",
+    version="2.0.0",
     lifespan=lifespan,
-    docs_url="/docs" if not settings.is_production else None,
-    redoc_url="/redoc" if not settings.is_production else None,
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    redirect_slashes=False,
 )
 
-# CORS middleware with basic configuration
+# =============================================================================
+# MIDDLEWARE SETUP
+# =============================================================================
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=getattr(settings, 'CORS_ORIGINS', ["*"]),
+    allow_credentials=getattr(settings, 'CORS_ALLOW_CREDENTIALS', True),
+    allow_methods=getattr(settings, 'CORS_ALLOW_METHODS', ["*"]),
+    allow_headers=getattr(settings, 'CORS_ALLOW_HEADERS', ["*"]),
 )
+logger.info("✅ CORS middleware enabled")
 
 # Include API routes if available
 if api_router_available:
@@ -90,14 +111,6 @@ if api_router_available:
         logger.info("✅ API routes included successfully")
     except Exception as e:
         logger.warning(f"⚠️ Failed to include API routes: {e}")
-
-# Try to setup API documentation
-try:
-    from app.core.api_docs import setup_api_documentation
-    setup_api_documentation(app)
-    logger.info("✅ API documentation setup successfully")
-except Exception as e:
-    logger.warning(f"⚠️ API documentation setup failed: {e}")
 
 
 # =============================================================================
@@ -109,25 +122,47 @@ async def root():
     """Root endpoint"""
     return {
         "message": "Dino E-Menu API",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "environment": getattr(settings, 'ENVIRONMENT', 'unknown'),
-        "status": "healthy"
+        "status": "healthy",
+        "features": [
+            "Core API endpoints",
+            "Role-based access control",
+            "Multi-tenant workspace support",
+            "JWT authentication"
+        ]
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint for Cloud Run"""
-    # Simple health check without cloud service dependencies
     health_status = {
         "status": "healthy",
         "service": "dino-api",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "environment": getattr(settings, 'ENVIRONMENT', 'unknown'),
         "project_id": getattr(settings, 'GCP_PROJECT_ID', 'unknown'),
         "database_id": getattr(settings, 'DATABASE_NAME', 'unknown'),
-        "api_router": "available" if api_router_available else "unavailable"
+        "api_router": "available" if api_router_available else "unavailable",
+        "dependency_injection": "available" if di_available else "unavailable",
+        "features": {
+            "authentication": "JWT-based",
+            "authorization": "Role-based (SuperAdmin/Admin/Operator)",
+            "multi_tenancy": "Workspace-based isolation",
+            "role_management": "Comprehensive role and permission system",
+            "performance_optimization": "Caching and query optimization",
+            "repository_pattern": "Centralized with caching"
+        }
     }
+    
+    # Add DI service health if available
+    if di_available:
+        try:
+            services_health = check_services_health()
+            health_status["services"] = services_health
+        except Exception as e:
+            health_status["services_error"] = str(e)
     
     return health_status
 
@@ -146,6 +181,29 @@ async def readiness_check():
 async def liveness_check():
     """Liveness check for Cloud Run"""
     return {"status": "alive", "service": "dino-api"}
+
+
+@app.get("/metrics")
+async def performance_metrics():
+    """Performance metrics endpoint"""
+    try:
+        from app.services.performance_service import get_performance_service
+        performance_service = get_performance_service()
+        metrics = performance_service.get_performance_metrics()
+        
+        return {
+            "status": "success",
+            "service": "dino-api",
+            "metrics": metrics,
+            "timestamp": os.environ.get("STARTUP_TIME", "unknown")
+        }
+    except Exception as e:
+        logger.error(f"Failed to get performance metrics: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "service": "dino-api"
+        }
 
 
 # =============================================================================

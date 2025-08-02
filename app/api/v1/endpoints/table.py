@@ -12,7 +12,8 @@ from app.models.schemas import (
     Table, TableCreate, TableUpdate, TableStatus,
     ApiResponse, PaginatedResponse, QRCodeData
 )
-from app.core.base_endpoint import VenueIsolatedEndpoint
+# Removed base endpoint dependency
+from app.core.base_endpoint import WorkspaceIsolatedEndpoint
 from app.database.firestore import get_table_repo, TableRepository
 from app.core.security import get_current_user, get_current_admin_user
 from app.core.logging_config import get_logger
@@ -21,7 +22,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-class TablesEndpoint(VenueIsolatedEndpoint[Table, TableCreate, TableUpdate]):
+class TablesEndpoint(WorkspaceIsolatedEndpoint[Table, TableCreate, TableUpdate]):
     """Enhanced Tables endpoint with QR code management and status tracking"""
     
     def __init__(self):

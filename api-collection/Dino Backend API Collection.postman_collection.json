@@ -1,0 +1,2580 @@
+{
+	"info": {
+		"_postman_id": "3dae7883-d922-4988-95f2-011226634566",
+		"name": "Dino Backend API Collection",
+		"description": "Complete API collection for Dino Multi-Venue Platform with authentication and dummy data",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "36944325"
+	},
+	"item": [
+		{
+			"name": "🔧 System & Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access_token);",
+									"    pm.collectionVariables.set('user_id', response.user.id);",
+									"    pm.collectionVariables.set('workspace_id', response.user.workspace_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"mohd.aiman@dinoplatform.com\",\n  \"password\": \"DinoDemo123!\",\n  \"remember_me\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('workspace_id', response.data.workspace_id);",
+									"    pm.collectionVariables.set('venue_id', response.data.venue_id);",
+									"    pm.collectionVariables.set('access_token', response.access_token);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"workspace_display_name\": \"dino-demo-ws\",\n  \"workspace_description\": \"Demo workspace for Dino platform testing\",\n  \"business_type\": \"restaurant\",\n  \"venue_name\": \"dino-demo\",\n  \"venue_description\": \"A cozy demo venue for testing the Dino platform with great food and ambiance\",\n  \"venue_location\": {\n    \"address\": \"123 Demo Street, Tech Park\",\n    \"city\": \"Bangalore\",\n    \"state\": \"Karnataka\",\n    \"country\": \"India\",\n    \"postal_code\": \"560001\",\n    \"latitude\": 12.9716,\n    \"longitude\": 77.5946,\n    \"landmark\": \"Near Tech Park Metro Station\"\n  },\n  \"venue_phone\": \"+919876543210\",\n  \"venue_email\": \"contact@dino-demo.com\",\n  \"venue_website\": \"https://dino-demo.com\",\n  \"cuisine_types\": [\"Italian\", \"Continental\", \"Indian\", \"Beverages\"],\n  \"price_range\": \"mid_range\",\n  \"owner_email\": \"mohd.aiman@dinoplatform.com\",\n  \"owner_phone\": \"+919876543210\",\n  \"owner_first_name\": \"Mohd Aiman\",\n  \"owner_last_name\": \"Saleem\",\n  \"owner_password\": \"DinoDemo123!\",\n  \"confirm_password\": \"DinoDemo123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhb1pzN0dDalNZNUxRMGhzUElQMyIsInR5cGUiOiJyZWZyZXNoIiwiZXhwIjoxNzU2MjM0NzcyfQ.M3yr9giSSCjEm5qztk2nTaevg5swEkWtWpKfyveJy4g\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"refresh"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_password\": \"DinoDemo123!\",\n  \"new_password\": \"NewDinoDemo123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"change-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Current User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Mohd Aiman\",\n  \"last_name\": \"Saleem\",\n  \"phone\": \"+919876543210\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏢 Workspaces",
+			"item": [
+				{
+					"name": "Get Workspaces",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workspaces?page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Workspace by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workspaces/{{workspace_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces",
+								"{{workspace_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Workspace",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"display_name\": \"dino-demo-ws-updated\",\n  \"description\": \"Updated demo workspace for Dino platform\",\n  \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/workspaces/{{workspace_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces",
+								"{{workspace_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Workspace Venues",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workspaces/{{workspace_id}}/venues",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces",
+								"{{workspace_id}}",
+								"venues"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Workspace Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workspaces/{{workspace_id}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces",
+								"{{workspace_id}}",
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Workspace Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workspaces/{{workspace_id}}/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces",
+								"{{workspace_id}}",
+								"statistics"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏪 Venues",
+			"item": [
+				{
+					"name": "Get Public Venues",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/public?page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"public"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Public Venue by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/public/{{venue_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"public",
+								"{{venue_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Venue",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('venue_id', response.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"dino-demo\",\n  \"description\": \"A cozy demo venue for testing the Dino platform with great food, delicious cuisine, and a welcoming atmosphere\",\n  \"location\": {\n    \"address\": \"123 Demo Street, Tech Park\",\n    \"city\": \"Bangalore\",\n    \"state\": \"Karnataka\",\n    \"country\": \"India\",\n    \"postal_code\": \"560001\",\n    \"latitude\": 12.9716,\n    \"longitude\": 77.5946,\n    \"landmark\": \"Near Tech Park Metro Station\"\n  },\n  \"phone\": \"+919876543210\",\n  \"email\": \"contact@dino-demo.com\",\n  \"website\": \"https://dino-demo.com\",\n  \"cuisine_types\": [\"Italian\", \"Continental\", \"Indian\", \"Beverages\", \"Desserts\"],\n  \"price_range\": \"mid_range\",\n  \"operating_hours\": [\n    {\n      \"day_of_week\": 0,\n      \"is_open\": true,\n      \"open_time\": \"08:00:00\",\n      \"close_time\": \"22:00:00\",\n      \"is_24_hours\": false\n    },\n    {\n      \"day_of_week\": 1,\n      \"is_open\": true,\n      \"open_time\": \"08:00:00\",\n      \"close_time\": \"22:00:00\",\n      \"is_24_hours\": false\n    },\n    {\n      \"day_of_week\": 2,\n      \"is_open\": true,\n      \"open_time\": \"08:00:00\",\n      \"close_time\": \"22:00:00\",\n      \"is_24_hours\": false\n    },\n    {\n      \"day_of_week\": 3,\n      \"is_open\": true,\n      \"open_time\": \"08:00:00\",\n      \"close_time\": \"22:00:00\",\n      \"is_24_hours\": false\n    },\n    {\n      \"day_of_week\": 4,\n      \"is_open\": true,\n      \"open_time\": \"08:00:00\",\n      \"close_time\": \"22:00:00\",\n      \"is_24_hours\": false\n    },\n    {\n      \"day_of_week\": 5,\n      \"is_open\": true,\n      \"open_time\": \"08:00:00\",\n      \"close_time\": \"23:00:00\",\n      \"is_24_hours\": false\n    },\n    {\n      \"day_of_week\": 6,\n      \"is_open\": true,\n      \"open_time\": \"09:00:00\",\n      \"close_time\": \"23:00:00\",\n      \"is_24_hours\": false\n    }\n  ],\n  \"workspace_id\": \"{{workspace_id}}\",\n  \"subscription_plan\": \"premium\",\n  \"subscription_status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/venues",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Venue",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"dino-demo-updated\",\n  \"description\": \"Updated demo venue with enhanced features\",\n  \"phone\": \"+919876543211\",\n  \"cuisine_types\": [\"Italian\", \"Continental\", \"Indian\", \"Beverages\", \"Desserts\", \"Asian\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Venues",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/my-venues",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"my-venues"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Venues",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/search/text?q=demo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"search",
+								"text"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "demo"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}",
+								"analytics"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Venue Logo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}/logo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}",
+								"logo"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Operating Hours",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"day_of_week\": 0,\n    \"is_open\": true,\n    \"open_time\": \"08:00:00\",\n    \"close_time\": \"22:00:00\",\n    \"is_24_hours\": false\n  },\n  {\n    \"day_of_week\": 1,\n    \"is_open\": true,\n    \"open_time\": \"08:00:00\",\n    \"close_time\": \"22:00:00\",\n    \"is_24_hours\": false\n  }\n]"
+						},
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}/hours",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}",
+								"hours"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Operating Hours",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}/hours",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}",
+								"hours"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Venue",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}/activate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Subscription",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subscription_plan\": \"premium\",\n  \"subscription_status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/venues/{{venue_id}}/subscription",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}",
+								"subscription"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venues",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/venues?page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"venues"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👥 Users",
+			"item": [
+				{
+					"name": "Get Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users?page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('user_id', response.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"operator@dino-demo.com\",\n  \"phone\": \"+919876543212\",\n  \"first_name\": \"Demo\",\n  \"last_name\": \"Operator\",\n  \"password\": \"Operator123!\",\n  \"confirm_password\": \"Operator123!\",\n  \"role\": \"operator\",\n  \"workspace_id\": \"{{workspace_id}}\",\n  \"venue_id\": \"{{venue_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Updated Demo\",\n  \"last_name\": \"Operator\",\n  \"phone\": \"+919876543213\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/search/text?q=demo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"search",
+								"text"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "demo"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🪑 Tables",
+			"item": [
+				{
+					"name": "Get Tables",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tables?page=1&page_size=10&venue_id={{venue_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								},
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('table_id', response.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"table_number\": 1,\n  \"capacity\": 4,\n  \"location\": \"Window Side\",\n  \"venue_id\": \"{{venue_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tables",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tables/{{table_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables",
+								"{{table_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Table",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"capacity\": 6,\n  \"location\": \"Garden View\",\n  \"table_status\": \"available\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tables/{{table_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables",
+								"{{table_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Table Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "\"occupied\""
+						},
+						"url": {
+							"raw": "{{base_url}}/tables/{{table_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables",
+								"{{table_id}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table QR Code",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tables/{{table_id}}/qr-code",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables",
+								"{{table_id}}",
+								"qr-code"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify QR Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "\"sample_qr_code_here\""
+						},
+						"url": {
+							"raw": "{{base_url}}/tables/verify-qr",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables",
+								"verify-qr"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Tables",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tables/venues/{{venue_id}}/tables",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables",
+								"venues",
+								"{{venue_id}}",
+								"tables"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Create Tables",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"venue_id\": \"{{venue_id}}\",\n  \"start_number\": 2,\n  \"count\": 5,\n  \"capacity\": 4,\n  \"location\": \"Main Hall\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tables/bulk-create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tables",
+								"bulk-create"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🍽️ Menu",
+			"item": [
+				{
+					"name": "Menu Categories",
+					"item": [
+						{
+							"name": "Get Menu Categories",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/menu/categories?page=1&page_size=10&venue_id={{venue_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"categories"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "page_size",
+											"value": "10"
+										},
+										{
+											"key": "venue_id",
+											"value": "{{venue_id}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Menu Category",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.collectionVariables.set('menu_category_id', response.data.id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Beverages\",\n  \"description\": \"Hot and cold beverages including coffee, tea, and fresh juices\",\n  \"venue_id\": \"{{venue_id}}\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/menu/categories",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"categories"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Menu Category by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/menu/categories/{{menu_category_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"categories",
+										"{{menu_category_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Menu Category",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Hot & Cold Beverages\",\n  \"description\": \"Premium beverages including specialty coffee, artisan tea, and fresh juices\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/menu/categories/{{menu_category_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"categories",
+										"{{menu_category_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Venue Categories",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/menu/venues/{{venue_id}}/categories",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"venues",
+										"{{venue_id}}",
+										"categories"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Menu Items",
+					"item": [
+						{
+							"name": "Get Menu Items",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/menu/items?page=1&page_size=10&venue_id={{venue_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"items"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "page_size",
+											"value": "10"
+										},
+										{
+											"key": "venue_id",
+											"value": "{{venue_id}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Menu Item",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.collectionVariables.set('menu_item_id', response.data.id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Cappuccino\",\n  \"description\": \"Rich espresso with steamed milk and a layer of foam, served in a ceramic cup\",\n  \"base_price\": 150.0,\n  \"category_id\": \"{{menu_category_id}}\",\n  \"venue_id\": \"{{venue_id}}\",\n  \"is_vegetarian\": true,\n  \"is_vegan\": false,\n  \"is_gluten_free\": true,\n  \"spice_level\": \"mild\",\n  \"preparation_time_minutes\": 5,\n  \"nutritional_info\": {\n    \"calories\": 120\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/menu/items",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"items"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Menu Item by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/menu/items/{{menu_item_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"items",
+										"{{menu_item_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Menu Item",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Premium Cappuccino\",\n  \"description\": \"Rich espresso with steamed milk and artistic foam, served with a complimentary biscotti\",\n  \"base_price\": 180.0,\n  \"preparation_time_minutes\": 7\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/menu/items/{{menu_item_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"items",
+										"{{menu_item_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Venue Menu Items",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/menu/venues/{{venue_id}}/items",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"venues",
+										"{{venue_id}}",
+										"items"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Search Menu Items",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/menu/venues/{{venue_id}}/search?q=coffee",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"venues",
+										"{{venue_id}}",
+										"search"
+									],
+									"query": [
+										{
+											"key": "q",
+											"value": "coffee"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Upload Item Images",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "files",
+											"type": "file",
+											"src": []
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/menu/items/{{menu_item_id}}/images",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"items",
+										"{{menu_item_id}}",
+										"images"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Bulk Update Item Availability",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"item_ids\": [\"{{menu_item_id}}\"],\n  \"is_available\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/menu/items/bulk-update-availability",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"menu",
+										"items",
+										"bulk-update-availability"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "📋 Orders",
+			"item": [
+				{
+					"name": "Get Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders?page=1&page_size=10&venue_id={{venue_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								},
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('order_id', response.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"venue_id\": \"{{venue_id}}\",\n  \"customer_id\": \"demo_customer_123\",\n  \"order_type\": \"dine_in\",\n  \"table_id\": \"{{table_id}}\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"quantity\": 2,\n      \"special_instructions\": \"Extra hot, no sugar\"\n    }\n  ],\n  \"special_instructions\": \"Please serve quickly, customer is in a hurry\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/{{order_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"{{order_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "\"confirmed\""
+						},
+						"url": {
+							"raw": "{{base_url}}/orders/{{order_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"{{order_id}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Confirm Order",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/{{order_id}}/confirm?estimated_minutes=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"{{order_id}}",
+								"confirm"
+							],
+							"query": [
+								{
+									"key": "estimated_minutes",
+									"value": "15"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Order",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/{{order_id}}/cancel?reason=Customer requested cancellation",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"{{order_id}}",
+								"cancel"
+							],
+							"query": [
+								{
+									"key": "reason",
+									"value": "Customer requested cancellation"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/venues/{{venue_id}}/orders?limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"venues",
+								"{{venue_id}}",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Live Order Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/venues/{{venue_id}}/live",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"venues",
+								"{{venue_id}}",
+								"live"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/venues/{{venue_id}}/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"venues",
+								"{{venue_id}}",
+								"analytics"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🛒 Public Ordering (QR)",
+			"item": [
+				{
+					"name": "Access Menu via QR",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/public/qr/sample_qr_code_here",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"public",
+								"qr",
+								"sample_qr_code_here"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Venue Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/public/venue/{{venue_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"public",
+								"venue",
+								"{{venue_id}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"venue_id\": \"{{venue_id}}\",\n  \"table_id\": \"{{table_id}}\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders/public/validate-order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"public",
+								"validate-order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Public Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('public_order_id', response.order_id);",
+									"    pm.collectionVariables.set('customer_id', response.customer_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"venue_id\": \"{{venue_id}}\",\n  \"table_id\": \"{{table_id}}\",\n  \"customer\": {\n    \"name\": \"John Doe\",\n    \"phone\": \"+919876543213\",\n    \"email\": \"john.doe@example.com\"\n  },\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"quantity\": 2,\n      \"special_instructions\": \"Extra hot\"\n    }\n  ],\n  \"order_type\": \"qr_scan\",\n  \"special_instructions\": \"Table service please\",\n  \"estimated_guests\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders/public/create-order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"public",
+								"create-order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track Order Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/public/{{public_order_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"public",
+								"{{public_order_id}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order Receipt",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/public/{{public_order_id}}/receipt",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"public",
+								"{{public_order_id}}",
+								"receipt"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Submit Order Feedback",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/public/{{public_order_id}}/feedback?rating=5&feedback=Excellent service and food quality!",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"public",
+								"{{public_order_id}}",
+								"feedback"
+							],
+							"query": [
+								{
+									"key": "rating",
+									"value": "5"
+								},
+								{
+									"key": "feedback",
+									"value": "Excellent service and food quality!"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📊 Dashboard & Analytics",
+			"item": [
+				{
+					"name": "Get Dashboard Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/venue/{{venue_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"venue",
+								"{{venue_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sales Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/analytics/sales?venue_id={{venue_id}}&period=30",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"analytics",
+								"sales"
+							],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "period",
+									"value": "30"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Popular Items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/analytics/popular-items?venue_id={{venue_id}}&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"analytics",
+								"popular-items"
+							],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Revenue Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/analytics/revenue?venue_id={{venue_id}}&start_date=2024-01-01&end_date=2024-12-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"analytics",
+								"revenue"
+							],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-12-31"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🎯 Testing & Demo",
+			"item": [
+				{
+					"name": "Reset Demo Data",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"confirm\": true,\n  \"workspace_id\": \"{{workspace_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/demo/reset",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"demo",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Seed Demo Data",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"workspace_id\": \"{{workspace_id}}\",\n  \"venue_id\": \"{{venue_id}}\",\n  \"include_sample_menu\": true,\n  \"include_sample_tables\": true,\n  \"include_sample_orders\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/demo/seed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"demo",
+								"seed"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Test QR Codes",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"venue_id\": \"{{venue_id}}\",\n  \"table_count\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/demo/generate-qr-codes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"demo",
+								"generate-qr-codes"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📱 Mobile App Support",
+			"item": [
+				{
+					"name": "Get App Configuration",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/mobile/config",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"mobile",
+								"config"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Device Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"device_token\": \"sample_fcm_token_here\",\n  \"platform\": \"android\",\n  \"app_version\": \"1.0.0\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/mobile/register-device",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"mobile",
+								"register-device"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔔 Notifications",
+			"item": [
+				{
+					"name": "Get Notifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications?page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/notification_id_here/read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications",
+								"notification_id_here",
+								"read"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Test Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Notification\",\n  \"message\": \"This is a test notification from Dino Platform\",\n  \"type\": \"info\",\n  \"venue_id\": \"{{venue_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/notifications/send-test",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications",
+								"send-test"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💳 Payments & Billing",
+			"item": [
+				{
+					"name": "Get Payment Methods",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/payments/methods",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"methods"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"payment_method\": \"card\",\n  \"amount\": 360.0,\n  \"currency\": \"INR\",\n  \"payment_details\": {\n    \"card_token\": \"sample_card_token\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/process",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"process"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Payment Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/payments/payment_id_here/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"payment_id_here",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Invoice",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"customer_details\": {\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"+919876543213\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/generate-invoice",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"generate-invoice"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📈 Reports",
+			"item": [
+				{
+					"name": "Daily Sales Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/reports/daily-sales?venue_id={{venue_id}}&date=2024-01-15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reports",
+								"daily-sales"
+							],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "date",
+									"value": "2024-01-15"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Monthly Revenue Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/reports/monthly-revenue?venue_id={{venue_id}}&month=2024-01",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reports",
+								"monthly-revenue"
+							],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "month",
+									"value": "2024-01"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Menu Performance Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/reports/menu-performance?venue_id={{venue_id}}&period=30",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reports",
+								"menu-performance"
+							],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "period",
+									"value": "30"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Customer Analytics Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/reports/customer-analytics?venue_id={{venue_id}}&start_date=2024-01-01&end_date=2024-01-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reports",
+								"customer-analytics"
+							],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-01-31"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Export Report to PDF",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"report_type\": \"daily_sales\",\n  \"venue_id\": \"{{venue_id}}\",\n  \"date_range\": {\n    \"start_date\": \"2024-01-01\",\n    \"end_date\": \"2024-01-31\"\n  },\n  \"format\": \"pdf\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reports/export",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reports",
+								"export"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "workspace_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "venue_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "table_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "order_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "menu_category_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "menu_item_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "customer_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "public_order_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

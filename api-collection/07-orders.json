@@ -1,0 +1,518 @@
+		{
+			"name": "🛒 Order Management",
+			"description": "Order management endpoints for creating, updating, and tracking orders",
+			"item": [
+				{
+					"name": "Get All Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has orders array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/?page=1&page_size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								},
+								{
+									"key": "venue_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "order_type",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of orders with optional filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has order data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('order_number');",
+									"    pm.expect(jsonData).to.have.property('items');",
+									"    pm.expect(jsonData).to.have.property('total_amount');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/{{order_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "{{order_id}}"]
+						},
+						"description": "Get specific order by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has order data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('order_number');",
+									"    ",
+									"    // Store created order ID",
+									"    pm.environment.set('created_order_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"venue_id\": \"{{venue_id}}\",\n    \"customer_id\": \"{{customer_id}}\",\n    \"table_id\": \"{{table_id}}\",\n    \"order_type\": \"dine_in\",\n    \"items\": [\n        {\n            \"menu_item_id\": \"{{menu_item_id}}\",\n            \"quantity\": 2,\n            \"customizations\": {\n                \"size\": \"large\",\n                \"extra_shot\": true\n            },\n            \"special_instructions\": \"Extra hot please\"\n        },\n        {\n            \"menu_item_id\": \"{{menu_item_id_2}}\",\n            \"quantity\": 1,\n            \"customizations\": {},\n            \"special_instructions\": \"\"\n        }\n    ],\n    \"special_instructions\": \"Please serve together\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", ""]
+						},
+						"description": "Create a new order with items."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Public Order (QR)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has order data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('order_id');",
+									"    pm.expect(jsonData).to.have.property('order_number');",
+									"    pm.expect(jsonData).to.have.property('customer_id');",
+									"    ",
+									"    // Store created order and customer IDs",
+									"    pm.environment.set('public_order_id', jsonData.order_id);",
+									"    pm.environment.set('customer_id', jsonData.customer_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"venue_id\": \"{{venue_id}}\",\n    \"table_id\": \"{{table_id}}\",\n    \"customer\": {\n        \"name\": \"John Customer\",\n        \"mobile_number\": \"+1234567890\"\n    },\n    \"items\": [\n        {\n            \"menu_item_id\": \"{{menu_item_id}}\",\n            \"quantity\": 1,\n            \"customizations\": {\n                \"size\": \"medium\"\n            },\n            \"special_instructions\": \"No sugar\"\n        }\n    ],\n    \"order_type\": \"qr_scan\",\n    \"special_instructions\": \"Table service please\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/public",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "public"]
+						},
+						"description": "Create order from public interface (QR scan) without authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"confirmed\",\n    \"estimated_ready_time\": \"2024-01-15T14:30:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/{{created_order_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "{{created_order_id}}", "status"]
+						},
+						"description": "Update order status (pending, confirmed, preparing, ready, served, cancelled)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"payment_status\": \"paid\",\n    \"payment_method\": \"card\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/{{created_order_id}}/payment",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "{{created_order_id}}", "payment"]
+						},
+						"description": "Update order payment status and method."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Items to Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"items\": [\n        {\n            \"menu_item_id\": \"{{menu_item_id}}\",\n            \"quantity\": 1,\n            \"customizations\": {\n                \"size\": \"small\"\n            },\n            \"special_instructions\": \"Extra foam\"\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/{{created_order_id}}/items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "{{created_order_id}}", "items"]
+						},
+						"description": "Add additional items to an existing order."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Orders by Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has orders array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/status/pending?venue_id={{venue_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "status", "pending"],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								}
+							]
+						},
+						"description": "Get orders filtered by status."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order Analytics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has analytics data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('total_orders');",
+									"    pm.expect(jsonData).to.have.property('total_revenue');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/analytics?venue_id={{venue_id}}&period=7d",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "analytics"],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "period",
+									"value": "7d"
+								}
+							]
+						},
+						"description": "Get order analytics for a venue."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has orders array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/customer/{{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "customer", "{{customer_id}}"]
+						},
+						"description": "Get all orders for a specific customer."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Customer requested cancellation\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/{{created_order_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "{{created_order_id}}", "cancel"]
+						},
+						"description": "Cancel an order with reason."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order Receipt",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has receipt data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('order_number');",
+									"    pm.expect(jsonData).to.have.property('items');",
+									"    pm.expect(jsonData).to.have.property('total_amount');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/orders/{{created_order_id}}/receipt",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "orders", "{{created_order_id}}", "receipt"]
+						},
+						"description": "Get formatted receipt for an order."
+					},
+					"response": []
+				}
+			]
+		},

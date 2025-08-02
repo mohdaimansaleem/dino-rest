@@ -11,8 +11,9 @@ from app.models.schemas import (
     Order, OrderCreate, OrderUpdate, OrderStatus, PaymentStatus, OrderType,
     OrderItemBase, ApiResponse, PaginatedResponse
 )
-from app.core.base_endpoint import VenueIsolatedEndpoint
-from app.database.firestore import get_order_repo, OrderRepository
+# Removed base endpoint dependency
+from app.core.base_endpoint import WorkspaceIsolatedEndpoint
+from app.core.dependency_injection import get_repository_manager
 from app.core.security import get_current_user, get_current_admin_user
 from app.core.logging_config import get_logger
 
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-class OrdersEndpoint(VenueIsolatedEndpoint[Order, OrderCreate, OrderUpdate]):
+class OrdersEndpoint(WorkspaceIsolatedEndpoint[Order, OrderCreate, OrderUpdate]):
     """Enhanced Orders endpoint with lifecycle management"""
     
     def __init__(self):
@@ -33,8 +34,8 @@ class OrdersEndpoint(VenueIsolatedEndpoint[Order, OrderCreate, OrderUpdate]):
             require_admin=False
         )
     
-    def get_repository(self) -> OrderRepository:
-        return get_order_repo()
+    def get_repository(self):
+        return get_repository_manager().get_repository('order')
     
     async def _prepare_create_data(self, 
                                   data: Dict[str, Any], 
@@ -67,8 +68,7 @@ class OrdersEndpoint(VenueIsolatedEndpoint[Order, OrderCreate, OrderUpdate]):
         items = data.get('items', [])
         
         # Get menu item prices
-        from app.database.firestore import get_menu_item_repo
-        menu_repo = get_menu_item_repo()
+        menu_repo = get_repository_manager().get_repository('menu_item')
         
         subtotal = 0.0
         order_items = []
@@ -143,8 +143,7 @@ class OrdersEndpoint(VenueIsolatedEndpoint[Order, OrderCreate, OrderUpdate]):
     
     async def _validate_venue_access(self, venue_id: str, current_user: Dict[str, Any]):
         """Validate user has access to the venue"""
-        from app.database.firestore import get_venue_repo
-        venue_repo = get_venue_repo()
+        venue_repo = get_repository_manager().get_repository('venue')
         
         venue = await venue_repo.get_by_id(venue_id)
         if not venue:
@@ -161,8 +160,7 @@ class OrdersEndpoint(VenueIsolatedEndpoint[Order, OrderCreate, OrderUpdate]):
     
     async def _validate_table_access(self, table_id: str, venue_id: str):
         """Validate table belongs to venue and is available"""
-        from app.database.firestore import get_table_repo
-        table_repo = get_table_repo()
+        table_repo = get_repository_manager().get_repository('table')
         
         table = await table_repo.get_by_id(table_id)
         if not table:
@@ -426,7 +424,7 @@ async def confirm_order(
         
         if success and estimated_minutes:
             # Set estimated ready time
-            repo = get_order_repo()
+            repo = get_repository_manager().get_repository('order')
             estimated_ready_time = datetime.utcnow() + timedelta(minutes=estimated_minutes)
             await repo.update(order_id, {"estimated_ready_time": estimated_ready_time})
         
@@ -461,7 +459,7 @@ async def cancel_order(
         
         if success and reason:
             # Add cancellation reason
-            repo = get_order_repo()
+            repo = get_repository_manager().get_repository('order')
             await repo.update(order_id, {"cancellation_reason": reason})
         
         return ApiResponse(
@@ -498,7 +496,7 @@ async def get_venue_orders(
         # Validate venue access
         await orders_endpoint._validate_venue_access(venue_id, current_user)
         
-        repo = get_order_repo()
+        repo = get_repository_manager().get_repository('order')
         
         if status:
             orders_data = await repo.get_by_status(venue_id, status.value)
@@ -566,7 +564,7 @@ async def get_live_order_status(
         # Validate venue access
         await orders_endpoint._validate_venue_access(venue_id, current_user)
         
-        repo = get_order_repo()
+        repo = get_repository_manager().get_repository('order')
         
         # Get active orders (not completed/cancelled)
         active_statuses = [
@@ -634,7 +632,7 @@ async def get_customer_orders(
 ):
     """Get order history for a customer"""
     try:
-        repo = get_order_repo()
+        repo = get_repository_manager().get_repository('order')
         
         # Get customer orders
         orders_data = await repo.query([('customer_id', '==', customer_id)], limit=limit)
@@ -790,7 +788,7 @@ async def track_order_status(order_id: str):
     Track order status for customers
     """
     try:
-        order_repo = get_order_repo()
+        order_repo = get_repository_manager().get_repository('order')
         
         order = await order_repo.get_by_id(order_id)
         if not order:
@@ -816,8 +814,7 @@ async def track_order_status(order_id: str):
         # Get venue name
         venue_id = order.get("venue_id")
         if venue_id:
-            from app.database.firestore import get_venue_repo
-            venue_repo = get_venue_repo()
+            venue_repo = get_repository_manager().get_repository('venue')
             venue = await venue_repo.get_by_id(venue_id)
             if venue:
                 order_status["venue_name"] = venue.get("name")
@@ -846,9 +843,8 @@ async def get_order_receipt(order_id: str):
     Get order receipt with full details
     """
     try:
-        from app.database.firestore import get_venue_repo
-        order_repo = get_order_repo()
-        venue_repo = get_venue_repo()
+        order_repo = get_repository_manager().get_repository('order')
+        venue_repo = get_repository_manager().get_repository('venue')
         
         order = await order_repo.get_by_id(order_id)
         if not order:
@@ -880,8 +876,7 @@ async def get_order_receipt(order_id: str):
         # Get table number if available
         table_id = order.get("table_id")
         if table_id:
-            from app.database.firestore import get_table_repo
-            table_repo = get_table_repo()
+            table_repo = get_repository_manager().get_repository('table')
             table = await table_repo.get_by_id(table_id)
             if table:
                 receipt["table_number"] = table.get("table_number")
@@ -914,7 +909,7 @@ async def submit_order_feedback(
     Submit feedback for completed order
     """
     try:
-        order_repo = get_order_repo()
+        order_repo = get_repository_manager().get_repository('order')
         
         order = await order_repo.get_by_id(order_id)
         if not order:

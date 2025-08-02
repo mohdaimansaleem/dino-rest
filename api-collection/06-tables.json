@@ -1,0 +1,489 @@
+		{
+			"name": "🪑 Table Management",
+			"description": "Table management endpoints for creating and managing restaurant tables with QR codes",
+			"item": [
+				{
+					"name": "Get All Tables",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has tables array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/?venue_id={{venue_id}}&page=1&page_size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", ""],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "location",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "is_active",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of tables with optional filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has table data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('table_number');",
+									"    pm.expect(jsonData).to.have.property('capacity');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{table_id}}"]
+						},
+						"description": "Get specific table by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has table data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    ",
+									"    // Store created table ID",
+									"    pm.environment.set('created_table_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"table_number\": 15,\n    \"capacity\": 4,\n    \"location\": \"Window side\",\n    \"venue_id\": \"{{venue_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", ""]
+						},
+						"description": "Create a new table."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"capacity\": 6,\n    \"location\": \"Premium window side\",\n    \"table_status\": \"available\",\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{created_table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{created_table_id}}"]
+						},
+						"description": "Update table information."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Table Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"table_status\": \"occupied\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{table_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{table_id}}", "status"]
+						},
+						"description": "Update table status (available, booked, occupied, maintenance, out_of_service)."
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Table QR Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has QR code data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('qr_code_url');",
+									"    pm.expect(jsonData).to.have.property('qr_data');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{table_id}}/qr-code",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{table_id}}", "qr-code"]
+						},
+						"description": "Generate QR code for table ordering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table QR Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has QR code data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('qr_code_url');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{table_id}}/qr-code",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{table_id}}", "qr-code"]
+						},
+						"description": "Get existing QR code for a table."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has orders array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{table_id}}/orders?status=active",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{table_id}}", "orders"],
+							"query": [
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "date_from",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all orders for a specific table."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tables by Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has tables array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/status/available?venue_id={{venue_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "status", "available"],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								}
+							]
+						},
+						"description": "Get tables filtered by status (available, occupied, booked, etc.)."
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Update Table Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"    pm.expect(jsonData).to.have.property('updated_count');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"table_ids\": [\"{{table_id}}\", \"{{created_table_id}}\"],\n    \"table_status\": \"available\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/bulk-status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "bulk-status"]
+						},
+						"description": "Update status for multiple tables at once."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table Analytics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has analytics data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('utilization_rate');",
+									"    pm.expect(jsonData).to.have.property('total_orders');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{table_id}}/analytics?period=7d",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{table_id}}", "analytics"],
+							"query": [
+								{
+									"key": "period",
+									"value": "7d"
+								}
+							]
+						},
+						"description": "Get analytics data for a specific table."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/tables/{{created_table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "tables", "{{created_table_id}}"]
+						},
+						"description": "Delete a table. Usually performs soft delete."
+					},
+					"response": []
+				}
+			]
+		},

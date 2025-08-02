@@ -10,11 +10,9 @@ from app.models.schemas import (
     MenuItem, MenuItemCreate, MenuItemUpdate,
     ApiResponse, PaginatedResponse, SpiceLevel
 )
-from app.core.base_endpoint import VenueIsolatedEndpoint
-from app.database.firestore import (
-    get_menu_category_repo, get_menu_item_repo, 
-    MenuCategoryRepository, MenuItemRepository
-)
+# Removed base endpoint dependency
+from app.core.base_endpoint import WorkspaceIsolatedEndpoint
+from app.core.dependency_injection import get_repository_manager
 from app.core.security import get_current_user, get_current_admin_user
 from app.core.logging_config import get_logger
 
@@ -22,7 +20,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-class MenuCategoriesEndpoint(VenueIsolatedEndpoint[MenuCategory, MenuCategoryCreate, MenuCategoryUpdate]):
+class MenuCategoriesEndpoint(WorkspaceIsolatedEndpoint[MenuCategory, MenuCategoryCreate, MenuCategoryUpdate]):
     """Enhanced Menu Categories endpoint with venue isolation"""
     
     def __init__(self):
@@ -35,8 +33,8 @@ class MenuCategoriesEndpoint(VenueIsolatedEndpoint[MenuCategory, MenuCategoryCre
             require_admin=True
         )
     
-    def get_repository(self) -> MenuCategoryRepository:
-        return get_menu_category_repo()
+    def get_repository(self):
+        return get_repository_manager().get_repository('menu_category')
     
     async def _prepare_create_data(self, 
                                   data: Dict[str, Any], 
@@ -66,7 +64,7 @@ class MenuCategoriesEndpoint(VenueIsolatedEndpoint[MenuCategory, MenuCategoryCre
     async def _validate_venue_access(self, venue_id: str, current_user: Dict[str, Any]):
         """Validate user has access to the venue"""
         from app.database.firestore import get_venue_repo
-        venue_repo = get_venue_repo()
+        venue_repo = get_repository_manager().get_repository('venue')
         
         venue = await venue_repo.get_by_id(venue_id)
         if not venue:
@@ -87,7 +85,7 @@ class MenuCategoriesEndpoint(VenueIsolatedEndpoint[MenuCategory, MenuCategoryCre
                 )
 
 
-class MenuItemsEndpoint(VenueIsolatedEndpoint[MenuItem, MenuItemCreate, MenuItemUpdate]):
+class MenuItemsEndpoint(WorkspaceIsolatedEndpoint[MenuItem, MenuItemCreate, MenuItemUpdate]):
     """Enhanced Menu Items endpoint with venue isolation"""
     
     def __init__(self):
@@ -100,8 +98,8 @@ class MenuItemsEndpoint(VenueIsolatedEndpoint[MenuItem, MenuItemCreate, MenuItem
             require_admin=True
         )
     
-    def get_repository(self) -> MenuItemRepository:
-        return get_menu_item_repo()
+    def get_repository(self):
+        return get_repository_manager().get_repository('menu_item')
     
     async def _prepare_create_data(self, 
                                   data: Dict[str, Any], 
@@ -137,7 +135,7 @@ class MenuItemsEndpoint(VenueIsolatedEndpoint[MenuItem, MenuItemCreate, MenuItem
     async def _validate_venue_access(self, venue_id: str, current_user: Dict[str, Any]):
         """Validate user has access to the venue"""
         from app.database.firestore import get_venue_repo
-        venue_repo = get_venue_repo()
+        venue_repo = get_repository_manager().get_repository('venue')
         
         venue = await venue_repo.get_by_id(venue_id)
         if not venue:
@@ -159,7 +157,7 @@ class MenuItemsEndpoint(VenueIsolatedEndpoint[MenuItem, MenuItemCreate, MenuItem
     
     async def _validate_category_access(self, category_id: str, venue_id: str):
         """Validate category belongs to the venue"""
-        category_repo = get_menu_category_repo()
+        category_repo = get_repository_manager().get_repository('menu_category')
         
         category = await category_repo.get_by_id(category_id)
         if not category:
@@ -322,7 +320,7 @@ async def upload_category_image(
         image_url = f"https://example.com/categories/{category_id}/image.jpg"
         
         # Update category with image URL
-        repo = get_menu_category_repo()
+        repo = get_repository_manager().get_repository('menu_category')
         await repo.update(category_id, {"image_url": image_url})
         
         logger.info(f"Image uploaded for category: {category_id}")
@@ -430,7 +428,7 @@ async def delete_menu_item(
     """Delete menu item (soft delete by marking unavailable)"""
     try:
         # Custom soft delete for menu items - mark as unavailable
-        repo = get_menu_item_repo()
+        repo = get_repository_manager().get_repository('menu_item')
         
         # Check if item exists
         item = await repo.get_by_id(item_id)
@@ -490,7 +488,7 @@ async def upload_item_images(
         ]
         
         # Update item with image URLs
-        repo = get_menu_item_repo()
+        repo = get_repository_manager().get_repository('menu_item')
         current_images = item.image_urls or []
         all_images = current_images + uploaded_urls
         
@@ -530,7 +528,7 @@ async def get_venue_categories(
         # Validate venue access
         await categories_endpoint._validate_venue_access(venue_id, current_user)
         
-        repo = get_menu_category_repo()
+        repo = get_repository_manager().get_repository('menu_category')
         categories_data = await repo.get_by_venue(venue_id)
         
         # Filter active categories for non-admin users
@@ -570,7 +568,7 @@ async def get_venue_menu_items(
             # Validate venue access
             await items_endpoint._validate_venue_access(venue_id, current_user)
             
-            repo = get_menu_item_repo()
+            repo = get_repository_manager().get_repository('menu_item')
             items_data = await repo.get_by_venue(venue_id)
             
             # Filter available items for non-admin users
@@ -633,7 +631,7 @@ async def bulk_update_item_availability(
 ):
     """Bulk update menu item availability"""
     try:
-        repo = get_menu_item_repo()
+        repo = get_repository_manager().get_repository('menu_item')
         
         # Validate all items exist and user has access
         for item_id in item_ids:
@@ -681,7 +679,7 @@ async def toggle_category_items_availability(
         category = await categories_endpoint.get_item(category_id, current_user)
         
         # Get all items in category
-        repo = get_menu_item_repo()
+        repo = get_repository_manager().get_repository('menu_item')
         items_data = await repo.query([('category_id', '==', category_id)])
         
         # Bulk update

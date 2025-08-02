@@ -1,0 +1,313 @@
+		{
+			"name": "🏢 Workspace Management",
+			"description": "Multi-tenant workspace management endpoints for creating and managing workspaces",
+			"item": [
+				{
+					"name": "Get All Workspaces",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has workspaces array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/?page=1&page_size=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "is_active",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of workspaces. SuperAdmin can see all, others see only their workspace."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Workspace by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has workspace data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/{{workspace_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", "{{workspace_id}}"]
+						},
+						"description": "Get specific workspace by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Workspace",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has workspace data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    ",
+									"    // Store created workspace ID",
+									"    pm.environment.set('created_workspace_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test Restaurant Group\",\n    \"description\": \"A test workspace for restaurant management\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", ""]
+						},
+						"description": "Create a new workspace. Requires SuperAdmin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Workspace",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Restaurant Group\",\n    \"description\": \"Updated description for the restaurant group\",\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/{{created_workspace_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", "{{created_workspace_id}}"]
+						},
+						"description": "Update workspace information. Requires SuperAdmin or workspace admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Workspace Venues",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has venues array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/{{workspace_id}}/venues",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", "{{workspace_id}}", "venues"]
+						},
+						"description": "Get all venues belonging to a specific workspace."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Workspace Users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has users array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/{{workspace_id}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", "{{workspace_id}}", "users"]
+						},
+						"description": "Get all users belonging to a specific workspace."
+					},
+					"response": []
+				},
+				{
+					"name": "Workspace Analytics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has analytics data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('total_venues');",
+									"    pm.expect(jsonData).to.have.property('total_users');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/{{workspace_id}}/analytics?period=30d",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", "{{workspace_id}}", "analytics"],
+							"query": [
+								{
+									"key": "period",
+									"value": "30d"
+								}
+							]
+						},
+						"description": "Get analytics data for a specific workspace."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Workspace",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/workspaces/{{created_workspace_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "workspaces", "{{created_workspace_id}}"]
+						},
+						"description": "Delete a workspace. Requires SuperAdmin privileges. Usually performs soft delete."
+					},
+					"response": []
+				}
+			]
+		},

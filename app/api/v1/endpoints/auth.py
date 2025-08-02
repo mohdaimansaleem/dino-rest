@@ -9,7 +9,7 @@ from app.models.schemas import (
 )
 from pydantic import BaseModel
 from app.services.validation_service import get_validation_service
-from app.services.auth_service import auth_service
+from app.core.dependency_injection import get_auth_service
 from app.core.security import get_current_user, get_current_user_id
 
 
@@ -97,43 +97,56 @@ async def register_workspace(registration_data: WorkspaceRegistration):
         }
         
         # 2. Create Venue
+        venue_mobile = registration_data.get_venue_mobile_number()
+        if not venue_mobile:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Venue mobile number is required. Please provide either venueMobile, venuePhone, ownerMobile, or ownerPhone."
+            )
+        
         venue_data = {
             "id": venue_id,
-            "workspace_id": workspace_id,
             "name": registration_data.venue_name,
             "description": registration_data.venue_description,
             "location": registration_data.venue_location.dict(),
-            "phone": registration_data.venue_phone,
-            "email": registration_data.venue_email,
+            "mobile_number": venue_mobile,
+            "email": registration_data.venue_email or registration_data.owner_email,
             "website": str(registration_data.venue_website) if registration_data.venue_website else None,
+            "cuisine_types": [],
             "price_range": registration_data.price_range.value,
             "subscription_plan": "basic",
+            "subscription_status": "active",
+            "admin_id": user_id,
             "is_active": True,
-            "is_verified": False,
+            "rating": 0.0,
+            "total_reviews": 0,
             "created_at": current_time,
             "updated_at": current_time
         }
         
         # 3. Create User (Owner with superadmin role)
         hashed_password = get_password_hash(registration_data.owner_password)
+        
+        # Get mobile number from any available field
+        owner_mobile = registration_data.get_owner_mobile_number()
+        if not owner_mobile:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Owner mobile number is required. Please provide either ownerMobile or ownerPhone."
+            )
+        
         user_data = {
             "id": user_id,
             "email": registration_data.owner_email,
-            "phone": registration_data.owner_phone,
+            "mobile_number": owner_mobile,
             "first_name": registration_data.owner_first_name,
             "last_name": registration_data.owner_last_name,
-            "password": registration_data.owner_password,  # Add plain password for validation
             "hashed_password": hashed_password,
-            "workspace_id": workspace_id,
-            "venue_id": venue_id,
-            "venue_ids": [venue_id],  
             "role_id": superadmin_role["id"],
-            "is_workspace_owner": True,
-            "is_venue_owner": True,
             "is_active": True,
             "is_verified": False,
             "email_verified": False,
-            "phone_verified": False,
+            "mobile_verified": False,
             "created_at": current_time,
             "updated_at": current_time,
             "last_login": None
@@ -143,9 +156,7 @@ async def register_workspace(registration_data: WorkspaceRegistration):
         # The validation service expects entities to already exist, which they don't during creation
         logger.info("Skipping validation during registration - creating all entities together")
         
-        # Remove plain password from user_data before storing
-        user_data_for_storage = user_data.copy()
-        user_data_for_storage.pop("password", None)
+        # User data is ready for storage (no plain password to remove)
         
         # Create all records in sequence
         try:
@@ -158,7 +169,7 @@ async def register_workspace(registration_data: WorkspaceRegistration):
             logger.info(f"Venue created: {venue_id}")
             
             # Create user
-            await user_repo.create(user_data_for_storage)
+            await user_repo.create(user_data)
             logger.info(f"User created: {user_id}")
             
             # Skip entity mapping verification for now
@@ -232,30 +243,20 @@ async def register_workspace(registration_data: WorkspaceRegistration):
 async def login_user(login_data: UserLogin):
     """Login user and return JWT token"""
     try:
-        token = await auth_service.login_user(login_data)
-        
-        # Log successful login for monitoring
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
-        logger.info("User login successful", extra={
-            "user_email": login_data.email,
-            "user_id": token.user.id,
-            "token_expires_in": token.expires_in
-        })
-        
+        token = await get_auth_service().login_user(login_data)
         return token
+        
     except HTTPException:
         raise
+        
     except Exception as e:
         from app.core.logging_config import get_logger
         logger = get_logger(__name__)
-        logger.error("Login failed", extra={
-            "user_email": login_data.email,
-            "error": str(e)
-        })
+        logger.error(f"Login failed with unexpected error: {e}", exc_info=True)
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Login failed: {str(e)}"
+            detail="Login failed"
         )
 
 @router.get("/me", response_model=User)
@@ -273,7 +274,7 @@ async def update_current_user(
         # Convert to dict and remove None values
         update_data = user_update.dict(exclude_unset=True)
         
-        user = await auth_service.update_user(current_user_id, update_data)
+        user = await get_auth_service().update_user(current_user_id, update_data)
         return ApiResponse(
             success=True,
             message="User updated successfully",
@@ -295,7 +296,7 @@ async def change_password(
 ):
     """Change user password"""
     try:
-        await auth_service.change_password(current_user_id, current_password, new_password)
+        await get_auth_service().change_password(current_user_id, current_password, new_password)
         return ApiResponse(
             success=True,
             message="Password changed successfully"
@@ -313,7 +314,7 @@ async def change_password(
 async def refresh_token(request_data: RefreshTokenRequest):
     """Refresh JWT token"""
     try:
-        token = await auth_service.refresh_token(request_data.refresh_token)
+        token = await get_auth_service().refresh_token(request_data.refresh_token)
         return token
     except HTTPException:
         raise
@@ -323,6 +324,163 @@ async def refresh_token(request_data: RefreshTokenRequest):
             detail=f"Token refresh failed: {str(e)}"
         )
 
+
+@router.get("/permissions", response_model=ApiResponse)
+async def get_user_permissions(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get current user's permissions"""
+    try:
+        from app.services.role_permission_service import role_permission_service
+        from app.database.firestore import get_role_repo
+        
+        # Get user's role and permissions
+        role_repo = get_role_repo()
+        user_role_id = current_user.get('role_id')
+        
+        if not user_role_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has no role assigned"
+            )
+        
+        # Get role with permissions
+        role = await role_repo.get_by_id(user_role_id)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User role not found"
+            )
+        
+        # Get permissions from role
+        permissions = role.get('permission_ids', [])
+        
+        # Get detailed permission information
+        from app.database.firestore import get_permission_repo
+        perm_repo = get_permission_repo()
+        detailed_permissions = []
+        
+        for perm_id in permissions:
+            perm = await perm_repo.get_by_id(perm_id)
+            if perm:
+                detailed_permissions.append({
+                    'id': perm['id'],
+                    'name': perm['name'],
+                    'resource': perm['resource'],
+                    'action': perm['action'],
+                    'scope': perm['scope'],
+                    'description': perm['description']
+                })
+        
+        # Get dashboard permissions
+        dashboard_permissions = await role_permission_service.get_role_dashboard_permissions(current_user['id'])
+        
+        return ApiResponse(
+            success=True,
+            message="User permissions retrieved successfully",
+            data={
+                'user_id': current_user['id'],
+                'role': {
+                    'id': role['id'],
+                    'name': role['name'],
+                    'display_name': role.get('display_name', role['name']),
+                    'description': role.get('description', '')
+                },
+                'permissions': detailed_permissions,
+                'dashboard_permissions': dashboard_permissions,
+                'permission_count': len(detailed_permissions)
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.error(f"Error getting user permissions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get user permissions"
+        )
+
+@router.post("/refresh-permissions", response_model=ApiResponse)
+async def refresh_user_permissions(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Refresh current user's permissions (for real-time updates)"""
+    try:
+        # This endpoint can be used to trigger permission refresh
+        # For now, it returns the same as get_user_permissions
+        # In the future, this could trigger cache invalidation or other refresh logic
+        
+        from app.services.role_permission_service import role_permission_service
+        from app.database.firestore import get_role_repo
+        
+        # Get user's role and permissions
+        role_repo = get_role_repo()
+        user_role_id = current_user.get('role_id')
+        
+        if not user_role_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has no role assigned"
+            )
+        
+        # Get role with permissions
+        role = await role_repo.get_by_id(user_role_id)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User role not found"
+            )
+        
+        # Get permissions from role
+        permissions = role.get('permission_ids', [])
+        
+        # Get detailed permission information
+        from app.database.firestore import get_permission_repo
+        perm_repo = get_permission_repo()
+        detailed_permissions = []
+        
+        for perm_id in permissions:
+            perm = await perm_repo.get_by_id(perm_id)
+            if perm:
+                detailed_permissions.append({
+                    'id': perm['id'],
+                    'name': perm['name'],
+                    'resource': perm['resource'],
+                    'action': perm['action'],
+                    'scope': perm['scope'],
+                    'description': perm['description']
+                })
+        
+        # Get dashboard permissions
+        dashboard_permissions = await role_permission_service.get_role_dashboard_permissions(current_user['id'])
+        
+        return ApiResponse(
+            success=True,
+            message="User permissions refreshed successfully",
+            data={
+                'user_id': current_user['id'],
+                'role': {
+                    'id': role['id'],
+                    'name': role['name'],
+                    'display_name': role.get('display_name', role['name']),
+                    'description': role.get('description', '')
+                },
+                'permissions': detailed_permissions,
+                'dashboard_permissions': dashboard_permissions,
+                'permission_count': len(detailed_permissions),
+                'refreshed_at': datetime.utcnow().isoformat()
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.error(f"Error refreshing user permissions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to refresh user permissions"
+        )
 
 @router.post("/logout", response_model=ApiResponse)
 async def logout_user():
@@ -353,16 +511,13 @@ async def deactivate_venue(
                 detail="Venue not found"
             )
         
-        # Check permissions - only allow if user is admin/superadmin or venue owner
-        user_role = current_user.get('role')
-        user_workspace_id = current_user.get('workspace_id')
-        venue_workspace_id = venue.get('workspace_id')
-        venue_owner_id = venue.get('owner_id')
+        # Check permissions - get user role from role_id
+        from app.core.security import _get_user_role
+        user_role = await _get_user_role(current_user)
         venue_admin_id = venue.get('admin_id')
         
         if not (user_role in ['admin', 'superadmin'] or 
-                current_user['id'] in [venue_owner_id, venue_admin_id] or
-                (user_workspace_id == venue_workspace_id and user_role == 'admin')):
+                current_user['id'] == venue_admin_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions to deactivate this venue"
@@ -412,16 +567,13 @@ async def activate_venue(
                 detail="Venue not found"
             )
         
-        # Check permissions - only allow if user is admin/superadmin or venue owner
-        user_role = current_user.get('role')
-        user_workspace_id = current_user.get('workspace_id')
-        venue_workspace_id = venue.get('workspace_id')
-        venue_owner_id = venue.get('owner_id')
+        # Check permissions - get user role from role_id
+        from app.core.security import _get_user_role
+        user_role = await _get_user_role(current_user)
         venue_admin_id = venue.get('admin_id')
         
         if not (user_role in ['admin', 'superadmin'] or 
-                current_user['id'] in [venue_owner_id, venue_admin_id] or
-                (user_workspace_id == venue_workspace_id and user_role == 'admin')):
+                current_user['id'] == venue_admin_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions to activate this venue"

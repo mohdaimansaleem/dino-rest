@@ -1,0 +1,414 @@
+		{
+			"name": "🏪 Venue Management",
+			"description": "Restaurant/cafe venue management endpoints for creating and managing venues",
+			"item": [
+				{
+					"name": "Get All Venues",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has venues array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/?page=1&page_size=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "price_range",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of venues with optional filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has venue data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"    pm.expect(jsonData).to.have.property('location');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{venue_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{venue_id}}"]
+						},
+						"description": "Get specific venue by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Venue",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has venue data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    ",
+									"    // Store created venue ID",
+									"    pm.environment.set('created_venue_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"The Coffee Corner\",\n    \"description\": \"A cozy coffee shop with fresh pastries and artisan coffee\",\n    \"location\": {\n        \"address\": \"123 Main Street\",\n        \"city\": \"San Francisco\",\n        \"state\": \"California\",\n        \"country\": \"United States\",\n        \"postal_code\": \"94102\",\n        \"landmark\": \"Near Union Square\"\n    },\n    \"mobile_number\": \"+14155551234\",\n    \"email\": \"info@coffecorner.com\",\n    \"website\": \"https://www.coffecorner.com\",\n    \"cuisine_types\": [\"Coffee\", \"Pastries\", \"Light Meals\"],\n    \"price_range\": \"budget\",\n    \"subscription_plan\": \"basic\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", ""]
+						},
+						"description": "Create a new venue. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Venue",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"The Coffee Corner - Updated\",\n    \"description\": \"An updated cozy coffee shop with fresh pastries and artisan coffee\",\n    \"mobile_number\": \"+14155551235\",\n    \"website\": \"https://www.coffecorner-updated.com\",\n    \"cuisine_types\": [\"Coffee\", \"Pastries\", \"Light Meals\", \"Breakfast\"],\n    \"price_range\": \"mid_range\",\n    \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{created_venue_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{created_venue_id}}"]
+						},
+						"description": "Update venue information. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Menu",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has menu data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('categories');",
+									"    pm.expect(jsonData).to.have.property('items');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{venue_id}}/menu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{venue_id}}", "menu"]
+						},
+						"description": "Get complete menu for a specific venue."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Tables",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has tables array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{venue_id}}/tables",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{venue_id}}", "tables"]
+						},
+						"description": "Get all tables for a specific venue."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has orders data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{venue_id}}/orders?status=pending&date_from=2024-01-01",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{venue_id}}", "orders"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending"
+								},
+								{
+									"key": "date_from",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "date_to",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get orders for a specific venue with optional filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue Analytics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has analytics data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('total_orders');",
+									"    pm.expect(jsonData).to.have.property('total_revenue');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{venue_id}}/analytics?period=7d",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{venue_id}}", "analytics"],
+							"query": [
+								{
+									"key": "period",
+									"value": "7d"
+								}
+							]
+						},
+						"description": "Get analytics data for a specific venue."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Venue Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"maintenance\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{venue_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{venue_id}}", "status"]
+						},
+						"description": "Update venue operational status (active, inactive, maintenance, closed)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Venue",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/venues/{{created_venue_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "venues", "{{created_venue_id}}"]
+						},
+						"description": "Delete a venue. Requires admin privileges. Usually performs soft delete."
+					},
+					"response": []
+				}
+			]
+		},

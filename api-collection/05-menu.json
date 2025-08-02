@@ -1,0 +1,517 @@
+		{
+			"name": "🍽️ Menu Management",
+			"description": "Menu categories and items management endpoints",
+			"item": [
+				{
+					"name": "Get Menu Categories",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has categories array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/categories?venue_id={{venue_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "categories"],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "is_active",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all menu categories for a venue."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Menu Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has category data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    ",
+									"    // Store created category ID",
+									"    pm.environment.set('created_category_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Beverages\",\n    \"description\": \"Hot and cold beverages including coffee, tea, and soft drinks\",\n    \"venue_id\": \"{{venue_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "categories"]
+						},
+						"description": "Create a new menu category."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Menu Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Hot & Cold Beverages\",\n    \"description\": \"Premium hot and cold beverages including specialty coffee, tea, and refreshing drinks\",\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/categories/{{created_category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "categories", "{{created_category_id}}"]
+						},
+						"description": "Update a menu category."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Menu Items",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has items array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/items?venue_id={{venue_id}}&page=1&page_size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "items"],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								},
+								{
+									"key": "category_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "is_available",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "is_vegetarian",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get menu items with optional filtering by category, availability, etc."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Menu Item by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has item data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"    pm.expect(jsonData).to.have.property('base_price');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/items/{{menu_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "items", "{{menu_item_id}}"]
+						},
+						"description": "Get specific menu item by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Menu Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has item data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    ",
+									"    // Store created item ID",
+									"    pm.environment.set('created_menu_item_id', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Cappuccino\",\n    \"description\": \"Rich espresso with steamed milk and a layer of foam, served in a ceramic cup\",\n    \"base_price\": 4.50,\n    \"category_id\": \"{{created_category_id}}\",\n    \"venue_id\": \"{{venue_id}}\",\n    \"is_vegetarian\": true,\n    \"spice_level\": \"mild\",\n    \"preparation_time_minutes\": 5,\n    \"nutritional_info\": {\n        \"calories\": 120\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "items"]
+						},
+						"description": "Create a new menu item."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Menu Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Premium Cappuccino\",\n    \"description\": \"Rich espresso with steamed organic milk and a perfect layer of foam, served in a handcrafted ceramic cup\",\n    \"base_price\": 5.00,\n    \"is_available\": true,\n    \"preparation_time_minutes\": 6,\n    \"nutritional_info\": {\n        \"calories\": 130\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/items/{{created_menu_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "items", "{{created_menu_item_id}}"]
+						},
+						"description": "Update a menu item."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Item Availability",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"is_available\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/items/{{created_menu_item_id}}/availability",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "items", "{{created_menu_item_id}}", "availability"]
+						},
+						"description": "Update menu item availability status."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Items by Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has items array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/categories/{{created_category_id}}/items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "categories", "{{created_category_id}}", "items"]
+						},
+						"description": "Get all items in a specific category."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Menu Items",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has search results', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/search?venue_id={{venue_id}}&q=coffee&is_vegetarian=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "search"],
+							"query": [
+								{
+									"key": "venue_id",
+									"value": "{{venue_id}}"
+								},
+								{
+									"key": "q",
+									"value": "coffee"
+								},
+								{
+									"key": "is_vegetarian",
+									"value": "true"
+								},
+								{
+									"key": "max_price",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "spice_level",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Search menu items by name, description, or other criteria."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Menu Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/items/{{created_menu_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "items", "{{created_menu_item_id}}"]
+						},
+						"description": "Delete a menu item."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Menu Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/{{api_version}}/menu/categories/{{created_category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "{{api_version}}", "menu", "categories", "{{created_category_id}}"]
+						},
+						"description": "Delete a menu category (only if no items are assigned)."
+					},
+					"response": []
+				}
+			]
+		},

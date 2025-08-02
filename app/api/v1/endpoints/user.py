@@ -8,14 +8,14 @@ from fastapi.security import HTTPBearer
 
 from app.models.schemas import (
     UserCreate, User, UserUpdate, UserLogin, AuthToken,
-    ApiResponse, UserAddress, UserPreferences, ImageUploadResponse,
+    ApiResponse, ImageUploadResponse,
     PaginatedResponse
 )
 from app.core.base_endpoint import WorkspaceIsolatedEndpoint
 from app.database.firestore import get_user_repo, UserRepository
 from app.database.validated_repository import get_validated_user_repo, ValidatedUserRepository
 from app.services.validation_service import get_validation_service
-from app.services.auth_service import auth_service
+from app.core.dependency_injection import get_auth_service
 from app.core.security import get_current_user, get_current_admin_user
 from app.core.logging_config import get_logger
 
@@ -51,11 +51,7 @@ class UserEndpoint(WorkspaceIsolatedEndpoint[User, UserCreate, UserUpdate]):
         data['is_active'] = True
         data['is_verified'] = False
         data['email_verified'] = False
-        data['phone_verified'] = False
-        
-        # Set workspace from current user if not provided
-        if not data.get('workspace_id') and current_user:
-            data['workspace_id'] = current_user.get('workspace_id')
+        data['mobile_verified'] = False
         
         return data
     
@@ -66,16 +62,8 @@ class UserEndpoint(WorkspaceIsolatedEndpoint[User, UserCreate, UserUpdate]):
         if not current_user:
             return  # Public registration allowed
         
-        # Check if user can create users in the specified workspace
-        target_workspace_id = data.get('workspace_id')
-        user_workspace_id = current_user.get('workspace_id')
-        
-        if target_workspace_id and user_workspace_id != target_workspace_id:
-            if current_user.get('role') != 'admin':
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Cannot create users in different workspace"
-                )
+        # Note: workspace_id field removed from users schema
+        # Workspace validation would need alternative logic
     
     async def _validate_update_permissions(self, 
                                          item: Dict[str, Any], 
@@ -91,10 +79,13 @@ class UserEndpoint(WorkspaceIsolatedEndpoint[User, UserCreate, UserUpdate]):
         if item['id'] == current_user['id']:
             return
         
-        # Admins can update users in their workspace
-        if current_user.get('role') == 'admin':
-            if item.get('workspace_id') == current_user.get('workspace_id'):
-                return
+        # Get user role from role_id
+        from app.core.security import _get_user_role
+        user_role = await _get_user_role(current_user)
+        
+        # Admins can update users
+        if user_role in ['admin', 'superadmin']:
+            return
         
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -108,11 +99,8 @@ class UserEndpoint(WorkspaceIsolatedEndpoint[User, UserCreate, UserUpdate]):
         """Build query filters for user search"""
         query_filters = []
         
-        # Add workspace filter for non-admin users
-        if current_user and current_user.get('role') != 'admin':
-            workspace_id = current_user.get('workspace_id')
-            if workspace_id:
-                query_filters.append(('workspace_id', '==', workspace_id))
+        # Note: workspace_id field removed from users schema
+        # Workspace filtering would need alternative logic
         
         # Add additional filters
         if filters:
@@ -132,7 +120,7 @@ class UserEndpoint(WorkspaceIsolatedEndpoint[User, UserCreate, UserUpdate]):
         base_filters = await self._build_query_filters(None, None, current_user)
         
         # Search in multiple fields
-        search_fields = ['first_name', 'last_name', 'email', 'phone']
+        search_fields = ['first_name', 'last_name', 'email', 'mobile_number']
         matching_users = await repo.search_text(
             search_fields=search_fields,
             search_term=search_term,
@@ -171,11 +159,11 @@ async def register_user(user_data: UserCreate):
             validation_service.raise_validation_exception(validation_errors)
         
         # Register user (auth_service will handle password hashing)
-        user = await auth_service.register_user(user_data)
+        user = await get_auth_service().register_user(user_data)
         
         # Login user immediately after registration
         login_data = UserLogin(email=user_data.email, password=user_data.password)
-        token = await auth_service.login_user(login_data)
+        token = await get_auth_service().login_user(login_data)
         
         logger.info(f"User registered successfully: {user_data.email}")
         return token
@@ -197,7 +185,7 @@ async def register_user(user_data: UserCreate):
 async def login_user(login_data: UserLogin):
     """Login user"""
     try:
-        token = await auth_service.login_user(login_data)
+        token = await get_auth_service().login_user(login_data)
         
         # Update last login
         user_repo = get_user_repo()
@@ -250,17 +238,17 @@ async def update_user_profile(
                     detail="Email already in use"
                 )
         
-        # Check if phone is being updated and is unique
-        if hasattr(update_data, 'phone') and update_data.phone and update_data.phone != current_user.get("phone"):
-            existing_phone = await user_repo.get_by_phone(update_data.phone)
-            if existing_phone:
+        # Check if mobile number is being updated and is unique
+        if hasattr(update_data, 'mobile_number') and update_data.mobile_number and update_data.mobile_number != current_user.get("mobile_number"):
+            existing_mobile = await user_repo.get_by_mobile(update_data.mobile_number)
+            if existing_mobile:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Phone number already in use"
+                    detail="Mobile number already in use"
                 )
         
         # Update user
-        updated_user = await auth_service.update_user(current_user['id'], update_data.dict(exclude_unset=True))
+        updated_user = await get_auth_service().update_user(current_user['id'], update_data.dict(exclude_unset=True))
         
         logger.info(f"User profile updated: {current_user['id']}")
         return ApiResponse(
@@ -332,7 +320,7 @@ async def upload_profile_image(
 async def get_users(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-    search: Optional[str] = Query(None, description="Search by name, email, or phone"),
+    search: Optional[str] = Query(None, description="Search by name, email, or mobile number"),
     role_id: Optional[str] = Query(None, description="Filter by role ID"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     current_user: Dict[str, Any] = Depends(get_current_admin_user)
@@ -459,8 +447,11 @@ async def search_users(
 ):
     """Search users by text"""
     try:
-        # Check permissions
-        if current_user.get("role") not in ["admin", "operator"]:
+        # Check permissions - get user role from role_id
+        from app.core.security import _get_user_role
+        user_role = await _get_user_role(current_user)
+        
+        if user_role not in ["admin", "operator", "superadmin"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to search users"
@@ -482,237 +473,10 @@ async def search_users(
 
 
 # =============================================================================
-# ADDRESS MANAGEMENT ENDPOINTS
+# ADDRESS MANAGEMENT ENDPOINTS - TEMPORARILY DISABLED
 # =============================================================================
-
-@router.post("/addresses", 
-             response_model=ApiResponse,
-             summary="Add user address",
-             description="Add a new address for the current user")
-async def add_user_address(
-    address: UserAddress,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Add a new address for the user"""
-    try:
-        user_repo = get_user_repo()
-        
-        # Get current user data
-        user_data = await user_repo.get_by_id(current_user['id'])
-        if not user_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Add address to user's addresses
-        addresses = user_data.get('addresses', [])
-        address_dict = address.dict()
-        address_dict['id'] = f"addr_{len(addresses) + 1}"
-        addresses.append(address_dict)
-        
-        # Update user
-        await user_repo.update(current_user['id'], {"addresses": addresses})
-        
-        logger.info(f"Address added for user: {current_user['id']}")
-        return ApiResponse(
-            success=True,
-            message="Address added successfully",
-            data=address_dict
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error adding address: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to add address"
-        )
-
-
-@router.get("/addresses", 
-            response_model=List[UserAddress],
-            summary="Get user addresses",
-            description="Get all addresses for the current user")
-async def get_user_addresses(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Get all addresses for the user"""
-    try:
-        user_repo = get_user_repo()
-        user_data = await user_repo.get_by_id(current_user['id'])
-        
-        if user_data and "addresses" in user_data:
-            return [UserAddress(**addr) for addr in user_data["addresses"]]
-        
-        return []
-        
-    except Exception as e:
-        logger.error(f"Error getting addresses: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get addresses"
-        )
-
-
-@router.put("/addresses/{address_id}", 
-            response_model=ApiResponse,
-            summary="Update user address",
-            description="Update a specific address")
-async def update_user_address(
-    address_id: str,
-    address_data: UserAddress,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Update a specific address"""
-    try:
-        user_repo = get_user_repo()
-        
-        # Get current user data
-        user_data = await user_repo.get_by_id(current_user['id'])
-        if not user_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Find and update address
-        addresses = user_data.get('addresses', [])
-        address_found = False
-        
-        for i, addr in enumerate(addresses):
-            if addr.get('id') == address_id:
-                addresses[i] = address_data.dict()
-                addresses[i]['id'] = address_id
-                address_found = True
-                break
-        
-        if not address_found:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Address not found"
-            )
-        
-        # Update user
-        await user_repo.update(current_user['id'], {"addresses": addresses})
-        
-        logger.info(f"Address updated for user: {current_user['id']}")
-        return ApiResponse(
-            success=True,
-            message="Address updated successfully"
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error updating address: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update address"
-        )
-
-
-@router.delete("/addresses/{address_id}", 
-               response_model=ApiResponse,
-               summary="Delete user address",
-               description="Delete a specific address")
-async def delete_user_address(
-    address_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Delete a specific address"""
-    try:
-        user_repo = get_user_repo()
-        
-        # Get current user data
-        user_data = await user_repo.get_by_id(current_user['id'])
-        if not user_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Remove address
-        addresses = user_data.get('addresses', [])
-        addresses = [addr for addr in addresses if addr.get('id') != address_id]
-        
-        # Update user
-        await user_repo.update(current_user['id'], {"addresses": addresses})
-        
-        logger.info(f"Address deleted for user: {current_user['id']}")
-        return ApiResponse(
-            success=True,
-            message="Address deleted successfully"
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting address: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete address"
-        )
-
-
-# =============================================================================
-# PREFERENCES MANAGEMENT ENDPOINTS
-# =============================================================================
-
-@router.put("/preferences", 
-            response_model=ApiResponse,
-            summary="Update user preferences",
-            description="Update user preferences and settings")
-async def update_user_preferences(
-    preferences: UserPreferences,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Update user preferences"""
-    try:
-        user_repo = get_user_repo()
-        
-        # Update user preferences
-        await user_repo.update(current_user['id'], {
-            "preferences": preferences.dict()
-        })
-        
-        logger.info(f"Preferences updated for user: {current_user['id']}")
-        return ApiResponse(
-            success=True,
-            message="Preferences updated successfully"
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error updating preferences: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update preferences"
-        )
-
-
-@router.get("/preferences", 
-            response_model=UserPreferences,
-            summary="Get user preferences",
-            description="Get current user preferences")
-async def get_user_preferences(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Get user preferences"""
-    try:
-        user_repo = get_user_repo()
-        user_data = await user_repo.get_by_id(current_user['id'])
-        
-        if user_data and "preferences" in user_data:
-            return UserPreferences(**user_data["preferences"])
-        
-        return UserPreferences()
-        
-    except Exception as e:
-        logger.error(f"Error getting preferences: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get preferences"
-        )
-
+# Note: UserAddress schema was removed during optimization
+# These endpoints can be re-enabled when address management is needed
 
 # =============================================================================
 # SECURITY ENDPOINTS
@@ -729,7 +493,7 @@ async def change_password(
 ):
     """Change user password"""
     try:
-        success = await auth_service.change_password(
+        success = await get_auth_service().change_password(
             current_user['id'], 
             current_password, 
             new_password
@@ -766,7 +530,7 @@ async def deactivate_account(
 ):
     """Deactivate user account"""
     try:
-        success = await auth_service.deactivate_user(current_user['id'])
+        success = await get_auth_service().deactivate_user(current_user['id'])
         
         if success:
             logger.info(f"Account deactivated for user: {current_user['id']}")

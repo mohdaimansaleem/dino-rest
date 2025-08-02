@@ -1,6 +1,6 @@
 """
-Production Configuration for Dino E-Menu Backend
-Environment-based configuration for Google Cloud Run deployment
+Configuration for Dino E-Menu Backend
+Simplified configuration for core functionality with roles and permissions
 """
 from pydantic_settings import BaseSettings
 from typing import List, Union, Optional
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    """Production application settings"""
+    """Application settings"""
     
     # =============================================================================
     # ENVIRONMENT & BASIC CONFIG
@@ -30,7 +30,6 @@ class Settings(BaseSettings):
     ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, description="JWT token expiration")
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=30, description="Refresh token expiration")
-    QR_ENCRYPTION_KEY: str = Field(default="dino-qr-encryption-key-change-in-production-32-chars", description="QR code encryption key")
     
     # =============================================================================
     # CORS CONFIGURATION
@@ -94,8 +93,6 @@ class Settings(BaseSettings):
     # APPLICATION FEATURES
     # =============================================================================
     QR_CODE_BASE_URL: str = Field(default="http://localhost:8000", description="Base URL for QR codes")
-    ENABLE_REAL_TIME_NOTIFICATIONS: bool = Field(default=True, description="Enable notifications")
-    WEBSOCKET_PING_INTERVAL: int = Field(default=30, description="WebSocket ping interval")
     DEFAULT_CURRENCY: str = Field(default="INR", description="Default currency")
     PAYMENT_GATEWAY: str = Field(default="razorpay", description="Payment gateway")
     RATE_LIMIT_PER_MINUTE: int = Field(default=60, description="Rate limit per minute")
@@ -167,6 +164,7 @@ class Settings(BaseSettings):
         
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        
         # Log configuration source for debugging
         if self.DEBUG:
             logger.info(f"Configuration loaded - Environment: {self.ENVIRONMENT}")
@@ -216,9 +214,10 @@ class CloudServiceManager:
         return self._storage_client
     
     def get_firestore_client(self) -> firestore.Client:
-        """Get Firestore client"""
+        """Get Firestore client with optimized settings"""
         if not self._firestore_client:
             try:
+                # Initialize with timeout settings for better performance
                 self._firestore_client = firestore.Client(
                     project=self.settings.GCP_PROJECT_ID,
                     database=self.settings.DATABASE_NAME
