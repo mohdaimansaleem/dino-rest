@@ -1,3 +1,4 @@
+
 """
 
 Authentication API Endpoints
@@ -7,6 +8,8 @@ Authentication API Endpoints
 from fastapi import APIRouter, HTTPException, status, Depends
 
 from typing import Dict, Any
+
+from datetime import datetime
 
 
 
@@ -204,7 +207,7 @@ async def register_workspace(registration_data: WorkspaceRegistration):
 
         status_code=status.HTTP_400_BAD_REQUEST,
 
-        detail="Venue mobile number is required. Please provide either venueMobile, venuePhone, ownerMobile, or ownerPhone."
+        detail="Venue mobile number is required. Please provide either venuePhone, ownerMobile, or ownerPhone."
 
       )
 
@@ -224,7 +227,7 @@ async def register_workspace(registration_data: WorkspaceRegistration):
 
       "email": registration_data.venue_email or registration_data.owner_email,
 
-      "website": str(registration_data.venue_website) if registration_data.venue_website else None,
+      "website": registration_data.venue_website,
 
       "cuisine_types": [],
 
