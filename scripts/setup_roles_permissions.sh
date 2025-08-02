@@ -19,7 +19,7 @@ set -euo pipefail  # Exit on error, undefined vars, pipe failures
 # =============================================================================
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-API_BASE_URL="${API_BASE_URL:-https://dino-backend-api-1018711634531.us-central1.run.app}"
+API_BASE_URL=https://dino-backend-api-867506203789.us-central1.run.app
 VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 
